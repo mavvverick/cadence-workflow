@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	app "jobprocessor/cmd/server"
+
+	app "github.com/YOVO-LABS/workflow/cmd/server"
 )
 
 func main() {

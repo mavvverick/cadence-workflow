@@ -2,9 +2,10 @@ package model
 
 import (
 	"context"
-	"jobprocessor/api/constant"
-	"jobprocessor/api/constant/codes"
-	"jobprocessor/internal/errors"
+
+	"github.com/YOVO-LABS/workflow/api/constant"
+	"github.com/YOVO-LABS/workflow/api/constant/codes"
+	"github.com/YOVO-LABS/workflow/internal/errors"
 
 	"gopkg.in/validator.v2"
 )

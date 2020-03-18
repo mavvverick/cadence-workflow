@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"jobprocessor/api/model"
-	jp "jobprocessor/workflow/jobprocessor"
-	lb "jobprocessor/workflow/leaderboard"
 
-	adapter "jobprocessor/internal/adapter"
+	"github.com/YOVO-LABS/workflow/api/model"
+	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
+	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
+
+	adapter "github.com/YOVO-LABS/workflow/internal/adapter"
 
 	"net/http"
 	"strings"

@@ -3,7 +3,7 @@ package jobprocessor
 import (
 	"time"
 
-	"jobprocessor/api/model"
+	"github.com/YOVO-LABS/workflow/api/model"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/workflow"

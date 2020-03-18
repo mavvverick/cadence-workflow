@@ -1,9 +1,9 @@
 package router
 
 import (
-	"jobprocessor/api/dicontainer"
-	"jobprocessor/config"
-	"jobprocessor/internal/handler"
+	"github.com/YOVO-LABS/workflow/api/dicontainer"
+	"github.com/YOVO-LABS/workflow/config"
+	"github.com/YOVO-LABS/workflow/internal/handler"
 
 	"github.com/go-chi/cors"
 

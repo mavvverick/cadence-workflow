@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	config "jobprocessor/config"
-	ca "jobprocessor/internal/adapter"
-	lb "jobprocessor/workflow/leaderboard"
+
+	config "github.com/YOVO-LABS/workflow/config"
+	ca "github.com/YOVO-LABS/workflow/internal/adapter"
+	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"

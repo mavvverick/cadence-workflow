@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"jobprocessor/api/model"
-	"jobprocessor/api/service"
 	"net/http"
+
+	"github.com/YOVO-LABS/workflow/api/model"
+	"github.com/YOVO-LABS/workflow/api/service"
 )
 
 // LeaderboardController ...

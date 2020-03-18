@@ -1,10 +1,11 @@
 package controller
 
 import (
-	"jobprocessor/api/constant"
-	"jobprocessor/api/constant/codes"
-	"jobprocessor/internal/errors"
 	"net/http"
+
+	"github.com/YOVO-LABS/workflow/api/constant"
+	"github.com/YOVO-LABS/workflow/api/constant/codes"
+	"github.com/YOVO-LABS/workflow/internal/errors"
 )
 
 //HTTPErrorController ...

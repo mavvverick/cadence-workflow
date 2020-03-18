@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"jobprocessor/api/model"
-	"jobprocessor/internal/adapter"
-	jp "jobprocessor/workflow/jobprocessor"
 	"time"
+
+	"github.com/YOVO-LABS/workflow/api/model"
+	"github.com/YOVO-LABS/workflow/internal/adapter"
+	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
 	"github.com/google/uuid"
 	"go.uber.org/cadence/client"

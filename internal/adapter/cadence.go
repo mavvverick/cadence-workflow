@@ -3,7 +3,7 @@ package adapter
 import (
 	"context"
 
-	config "jobprocessor/config"
+	config "github.com/YOVO-LABS/workflow/config"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"

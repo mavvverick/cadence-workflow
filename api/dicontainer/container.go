@@ -1,10 +1,10 @@
 package dicontainer
 
 import (
-	"jobprocessor/api/controller"
-	"jobprocessor/api/service"
-	"jobprocessor/config"
-	"jobprocessor/internal/adapter"
+	"github.com/YOVO-LABS/workflow/api/controller"
+	"github.com/YOVO-LABS/workflow/api/service"
+	"github.com/YOVO-LABS/workflow/config"
+	"github.com/YOVO-LABS/workflow/internal/adapter"
 )
 
 // ServiceContainer resolve all dependencies between controller, service, infrastructure except application level dependencies such us logging, config and etc ...

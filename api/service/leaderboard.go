@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"jobprocessor/config"
-	"jobprocessor/internal/adapter"
 	"strings"
 	"time"
 
-	lb "jobprocessor/workflow/leaderboard"
+	"github.com/YOVO-LABS/workflow/config"
+	"github.com/YOVO-LABS/workflow/internal/adapter"
+
+	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
 
 	"github.com/google/uuid"
 	"go.uber.org/cadence/client"

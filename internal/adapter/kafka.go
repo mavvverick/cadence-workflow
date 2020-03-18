@@ -1,7 +1,7 @@
 package adapter
 
 import (
-	"jobprocessor/common/messaging"
+	"github.com/YOVO-LABS/workflow/common/messaging"
 )
 
 //KafkaAdapter ...

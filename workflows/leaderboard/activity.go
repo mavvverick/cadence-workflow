@@ -2,15 +2,9 @@ package leaderboard
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"jobprocessor/config"
-	"jobprocessor/internal/adapter"
-	"jobprocessor/pkg"
-	"time"
 
-	"github.com/YOVO-LABS/theseus/db"
-	"github.com/jinzhu/gorm"
+	// "github.com/YOVO-LABS/theseus/db"
+
 	"go.uber.org/cadence/activity"
 )
 
@@ -31,73 +25,74 @@ func init() {
 }
 
 type challengeInfo struct {
-	post     *db.Post
+	// post     *db.Post
 	amount   float64
 	metaData string
 }
 
 func calculateLeaderBoard(ctx context.Context, jobID string) (map[int][]*challengeInfo, error) {
-	var competition pkg.CompetitionRanking
-	var chPost map[int][]*challengeInfo
-	var appConfig config.AppConfig
-	var kafkaClient adapter.KafkaAdapter
+	return nil, nil
+	// var competition pkg.CompetitionRanking
+	// var chPost map[int][]*challengeInfo
+	// var appConfig config.AppConfig
+	// var kafkaClient adapter.KafkaAdapter
 
-	appConfig.Setup()
-	kafkaClient.Setup(&appConfig.Kafka)
+	// appConfig.Setup()
+	// kafkaClient.Setup(&appConfig.Kafka)
 
-	DB, err := ConnectSQL()
-	if err != nil {
-		panic(err.Error())
-	}
-	defer DB.Close()
+	// DB, err := ConnectSQL()
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// defer DB.Close()
 
-	redisClient, err := pkg.ConnectRedis()
-	if err != nil {
-		panic(err.Error())
-	}
-	defer redisClient.Close()
+	// redisClient, err := pkg.ConnectRedis()
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// defer redisClient.Close()
 
-	var challenges []db.Challenge
-	if err := DB.Preload("ChallengeRounds", func(db *gorm.DB) *gorm.DB {
-		return db.Order("ChallengeRounds.level ASC")
-	}).Where("Challenges.state = ? and Challenges.expiry < ?", "LIVE", time.Now().Unix()).Order("Challenges.createdAt desc").Find(&challenges).Error; err != nil || len(challenges) < 1 {
-		fmt.Println("NO Challenges")
-	}
-	for _, chal := range challenges {
-		key := fmt.Sprintf("ch_%v_%v_votes", chal.ID, chal.RoundPostLevel)
-		rankBoard := competition.FetchCalculatedScore(key, chal.ChallengeRounds[0].Winner, redisClient)
-		if len(rankBoard) < 1 || rankBoard == nil {
-			continue
-		}
-		for _, rank := range rankBoard {
-			var post db.Post
-			if err := DB.Where("sid=? and username=?",
-				fmt.Sprintf("%v_%v", chal.ID, chal.RoundPostLevel), rank.leaderData.member).Find(&post).Error; err != nil {
-				fmt.Println("Not found", chal.ID, chal.RoundPostLevel, rank.leaderData.member)
-				continue
-			}
-			meta := fmt.Sprintf("%v|%v|%v", rank.rank, rank.amount, rank.leaderData.score)
-			post.Meta = meta
-			DB.Save(chInfo.post)
-			fmt.Println(post.ID, meta)
-			chInfo := challengeInfo{post: post, amount: rank.amount, metaData: meta}
+	// var challenges []db.Challenge
+	// if err := DB.Preload("ChallengeRounds", func(db *gorm.DB) *gorm.DB {
+	// 	return db.Order("ChallengeRounds.level ASC")
+	// }).Where("Challenges.state = ? and Challenges.expiry < ?", "LIVE", time.Now().Unix()).Order("Challenges.createdAt desc").Find(&challenges).Error; err != nil || len(challenges) < 1 {
+	// 	fmt.Println("NO Challenges")
+	// }
+	// for _, chal := range challenges {
+	// 	key := fmt.Sprintf("ch_%v_%v_votes", chal.ID, chal.RoundPostLevel)
+	// 	rankBoard := competition.FetchCalculatedScore(key, chal.ChallengeRounds[0].Winner, redisClient)
+	// 	if len(rankBoard) < 1 || rankBoard == nil {
+	// 		continue
+	// 	}
+	// 	for _, rank := range rankBoard {
+	// 		var post db.Post
+	// 		if err := DB.Where("sid=? and username=?",
+	// 			fmt.Sprintf("%v_%v", chal.ID, chal.RoundPostLevel), rank.leaderData.member).Find(&post).Error; err != nil {
+	// 			fmt.Println("Not found", chal.ID, chal.RoundPostLevel, rank.leaderData.member)
+	// 			continue
+	// 		}
+	// 		meta := fmt.Sprintf("%v|%v|%v", rank.rank, rank.amount, rank.leaderData.score)
+	// 		post.Meta = meta
+	// 		DB.Save(chInfo.post)
+	// 		fmt.Println(post.ID, meta)
+	// 		chInfo := challengeInfo{post: post, amount: rank.amount, metaData: meta}
 
-			msg, err := json.Marshal(chInfo)
-			if err != nil {
-				panic(err)
-				return
-			}
+	// 		msg, err := json.Marshal(chInfo)
+	// 		if err != nil {
+	// 			panic(err)
+	// 			return
+	// 		}
 
-			fmt.Println(string(msg))
-			err = kafkaClient.Producer.Publish(context.Background(), jobID, msg)
-			if err != nil {
-				panic(err)
-				return
-			}
-		}
-		// EXP challenge
-	}
-	return chPost, nil
+	// 		fmt.Println(string(msg))
+	// 		err = kafkaClient.Producer.Publish(context.Background(), jobID, msg)
+	// 		if err != nil {
+	// 			panic(err)
+	// 			return
+	// 		}
+	// 	}
+	// 	// EXP challenge
+	// }
+	// return chPost, nil
 }
 
 // func pushLeaderboardScore(ctx context.Context, chPost map[int][]*challengeInfo) error {

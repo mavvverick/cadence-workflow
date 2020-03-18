@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	messaging "jobprocessor/common/messaging"
+	messaging "github.com/YOVO-LABS/workflow/common/messaging"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"

@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"jobprocessor/api/constant"
-	"jobprocessor/api/constant/codes"
-	"jobprocessor/api/model"
-	"jobprocessor/config"
-	"jobprocessor/internal/errors"
 	"net/http"
 	"reflect"
+
+	"github.com/YOVO-LABS/workflow/api/model"
+	"github.com/YOVO-LABS/workflow/config"
+	"github.com/YOVO-LABS/workflow/internal/errors"
+
+	"github.com/YOVO-LABS/workflow/api/constant/codes"
+
+	"github.com/YOVO-LABS/workflow/api/constant"
 )
 
 //BaseController ...

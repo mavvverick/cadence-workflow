@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"jobprocessor/api/model"
+	"github.com/YOVO-LABS/workflow/api/model"
 
 	"cloud.google.com/go/storage"
 	"go.uber.org/cadence/activity"

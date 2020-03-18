@@ -1,9 +1,9 @@
 package server
 
 import (
-	"jobprocessor/api/dicontainer"
-	"jobprocessor/api/router"
-	config "jobprocessor/config"
+	"github.com/YOVO-LABS/workflow/api/dicontainer"
+	"github.com/YOVO-LABS/workflow/api/router"
+	config "github.com/YOVO-LABS/workflow/config"
 
 	"net/http"
 )
