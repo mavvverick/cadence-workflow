@@ -9,7 +9,7 @@ import (
 	"github.com/YOVO-LABS/workflow/config"
 	"github.com/YOVO-LABS/workflow/internal/adapter"
 
-	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
+	lb "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
 	"github.com/google/uuid"
 	"go.uber.org/cadence/client"
