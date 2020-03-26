@@ -28,7 +28,7 @@ func NewRouter(generalConfig config.AppConfig) RoutingInterface {
 	mux.Use(middleware.RequestID)
 	mux.Use(middleware.Recoverer)
 	mux.Use(middleware.RealIP)
-	mux.Use(SetJSON)
+	// mux.Use(SetJSON)
 	// mux.Use(logger.NewStructuredLogger())
 	mux.Use(cors.New(cors.Options{
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
@@ -49,11 +49,11 @@ func (h *router) Routes(container *dicontainer.ServiceContainer) {
 		r.Post("/workflow/cron/create", container.LeaderboardController.CreateCron)
 		r.Post("/workflow/terminate", container.LeaderboardController.TerminateCron)
 
-		r.Post("/workflow/terminate", container.JobProcessorController.CreateJob)
-		r.Post("/cadence/job/create", handler.CreateJobHandler)
-		r.Post("/cadence/job/register", handler.CallbackHandler)
-		r.Post("/cadence/job/create", handler.CreateJobHandler)
-		r.Post("/cadence/job/list", handler.ListHandler)
+		r.Post("/workflow/job/create", container.JobProcessorController.CreateJob)
+		r.Get("/workflow/job/start", handler.StartJobHandler)
+		r.Post("/workflow/job/register", handler.CallbackHandler)
+		r.Get("/workflow/job/action", container.JobProcessorController.ActionHandler)
+		r.Get("/workflow/job/list", handler.ListHandler)
 	})
 
 	h.mux.NotFound(container.HTTPErrorController.ResourceNotFound)

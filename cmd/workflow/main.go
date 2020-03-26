@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	config "github.com/YOVO-LABS/workflow/config"
 	ca "github.com/YOVO-LABS/workflow/internal/adapter"
-	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
+	lb "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -34,6 +35,10 @@ func main() {
 	appConfig.LoadConfig("./config")
 	var cadenceClient ca.CadenceAdapter
 	cadenceClient.Setup(&appConfig.Cadence)
+
+	var tasklist string
+
+	flag.StringVar(&tasklist, "tasklist", "JobProcessor", "Name of the tasklist")
 
 	startWorkers(&cadenceClient, lb.TaskList)
 	// The workers are supposed to be long running process that should not exit.

@@ -13,7 +13,7 @@ import (
 // ApplicationName is the name of the tasklist
 const (
 	jobServerURL    = "http://localhost:4000"
-	TaskList        = "JobProcessing"
+	TaskList        = "JobProcessor"
 	ApplicationName = "JobProcessor"
 )
 
@@ -96,7 +96,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, &encodeFlag)
 	if err != nil || encodeFlag == "FAILED" {
-		logger.Info("Workflow completed with failed processJobSessionContext", zap.Error(err))
+		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
 		return "", err
 	}
 

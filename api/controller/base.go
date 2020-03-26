@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -122,7 +121,6 @@ func (c *BaseController) decodeRequestBody(r *http.Request, v interface{}) (err 
 	}
 
 	payloadBytes, err := ioutil.ReadAll(r.Body)
-	fmt.Println(payloadBytes)
 	defer r.Body.Close()
 
 	json.Unmarshal(payloadBytes, &v)
@@ -130,7 +128,6 @@ func (c *BaseController) decodeRequestBody(r *http.Request, v interface{}) (err 
 		err = errors.Wrap(err, codes.FailedToDecodeRequestBody, constant.DecodeRequestBodyErr)
 		return err
 	}
-	fmt.Println(&v)
 
 	return nil
 }

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"sort"
@@ -16,13 +15,13 @@ const (
 	completed          = "COMPLETED"
 )
 
-var allExpense = make(map[string]jobState)
-var tokenMap = make(map[string][]byte)
+var AllExpense = make(map[string]jobState)
+var TokenMap = make(map[string][]byte)
 
 //CallbackHandler ...
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	currState, ok := allExpense[id]
+	currState, ok := AllExpense[id]
 	if !ok {
 		fmt.Fprint(w, "ERROR:INVALID_ID")
 		return
@@ -41,26 +40,27 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	taskToken := r.PostFormValue("task_token")
 	fmt.Printf("Registered callback for ID=%s, token=%s\n", id, taskToken)
-	tokenMap[id] = []byte(taskToken)
+	TokenMap[id] = []byte(taskToken)
 	fmt.Fprint(w, "SUCCEED")
 }
 
 //ListHandler ...
 func ListHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "<h1>Job Processing SYSTEM</h1>"+"<a href=\"/cadence/job/list\">HOME</a>"+
+	fmt.Println(AllExpense)
+	fmt.Fprint(w, "<h1>Job Processing SYSTEM</h1>"+"<a href=\"/workflow/job/list\">HOME</a>"+
 		"<h3>All Job requests:</h3><table border=1><tr><th>Job ID</th><th>Status</th><th>Action</th>")
 	keys := []string{}
-	for k := range allExpense {
+	for k := range AllExpense {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, id := range keys {
-		state := allExpense[id]
+		state := AllExpense[id]
 		actionLink := ""
 		if state == created {
-			actionLink = fmt.Sprintf("<a href=\"/cadence/job/action?type=approve&id=%s\">"+
+			actionLink = fmt.Sprintf("<a href=\"/workflow/job/action?type=approve&id=%s\">"+
 				"<button style=\"background-color:#4CAF50;\">APPROVE</button></a>"+
-				"&nbsp;&nbsp;<a href=\"/cadence/job/action?type=reject&id=%s\">"+
+				"&nbsp;&nbsp;<a href=\"/workflow/job/action?type=reject&id=%s\">"+
 				"<button style=\"background-color:#f44336;\">REJECT</button></a>", id, id)
 		}
 		fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>", id, state, actionLink)
@@ -68,17 +68,18 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "</table>")
 }
 
-//CreateJobHandler ...
-func CreateJobHandler(w http.ResponseWriter, r *http.Request) {
+//StartJobHandler ...
+func StartJobHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("inside StartJobHandler")
 	isAPICall := r.URL.Query().Get("is_api_call") == "true"
 	id := r.URL.Query().Get("id")
-	_, ok := allExpense[id]
+	_, ok := AllExpense[id]
 	if ok {
 		fmt.Fprint(w, "ERROR:ID_ALREADY_EXISTS")
 		return
 	}
 
-	allExpense[id] = created
+	AllExpense[id] = created
 	if isAPICall {
 		fmt.Fprint(w, "SUCCEED")
 	} else {
@@ -89,49 +90,61 @@ func CreateJobHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //ActionHandler ....
-func (b *Service) ActionHandler(w http.ResponseWriter, r *http.Request) {
-	isAPICall := r.URL.Query().Get("is_api_call") == "true"
-	id := r.URL.Query().Get("id")
-	oldState, ok := allExpense[id]
-	if !ok {
-		fmt.Fprint(w, "ERROR:INVALID_ID")
-		return
-	}
-	actionType := r.URL.Query().Get("type")
-	switch actionType {
-	case "approve":
-		allExpense[id] = approved
-	case "reject":
-		allExpense[id] = rejected
-	case "processed":
-		allExpense[id] = completed
-	}
-	if isAPICall {
-		fmt.Fprint(w, "SUCCEED")
-	} else {
-		ListHandler(w, r)
-	}
+// func ActionHandler(w http.ResponseWriter, r *http.Request) {
+// 	isAPICall := r.URL.Query().Get("is_api_call") == "true"
+// 	id := r.URL.Query().Get("id")
+// 	oldState, ok := AllExpense[id]
+// 	if !ok {
+// 		fmt.Fprint(w, "ERROR:INVALID_ID")
+// 		return
+// 	}
+// 	actionType := r.URL.Query().Get("type")
+// 	switch actionType {
+// 	case "approve":
+// 		AllExpense[id] = approved
+// 	case "reject":
+// 		AllExpense[id] = rejected
+// 	case "processed":
+// 		AllExpense[id] = completed
+// 	}
+// 	if isAPICall {
+// 		fmt.Fprint(w, "SUCCEED")
+// 	} else {
+// 		ListHandler(w, r)
+// 	}
 
-	if oldState == created && (allExpense[id] == approved || allExpense[id] == rejected) {
-		// report state change
-		b.NotifyJobStateChange(id, string(allExpense[id]))
-	}
+// 	if oldState == created && (AllExpense[id] == approved || AllExpense[id] == rejected) {
+// 		token, ok := TokenMap[id]
+// 		if !ok {
+// 			fmt.Printf("Invalid id:%s\n", id)
+// 			return
+// 		}
+// 		var jobProcessorService *service.JobProcessorService
+// 		err := jobProcessorService.CadenceAdapter.CadenceClient.CompleteActivity(context.Background(), token, state, nil)
+// 		if err != nil {
+// 			fmt.Printf("Failed to complete activity with error: %+v\n", err)
+// 		} else {
+// 			fmt.Printf("Successfully complete activity: %s\n", token)
+// 		}
+// 		// report state change
+// 		// l.NotifyJobStateChange(id, string(allExpense[id]))
+// 	}
 
-	fmt.Printf("Set state for %s from %s to %s.\n", id, oldState, allExpense[id])
-	return
-}
+// 	fmt.Printf("Set state for %s from %s to %s.\n", id, oldState, AllExpense[id])
+// 	return
+// }
 
 //NotifyJobStateChange ...
-func (b *Service) NotifyJobStateChange(id, state string) {
-	token, ok := tokenMap[id]
-	if !ok {
-		fmt.Printf("Invalid id:%s\n", id)
-		return
-	}
-	err := b.CadenceAdapter.CadenceClient.CompleteActivity(context.Background(), token, state, nil)
-	if err != nil {
-		fmt.Printf("Failed to complete activity with error: %+v\n", err)
-	} else {
-		fmt.Printf("Successfully complete activity: %s\n", token)
-	}
-}
+// func (l *service.JobProcessorService) NotifyJobStateChange(id, state string) {
+// 	token, ok := tokenMap[id]
+// 	if !ok {
+// 		fmt.Printf("Invalid id:%s\n", id)
+// 		return
+// 	}
+// 	err := l.CadenceAdapter.CadenceClient.CompleteActivity(context.Background(), token, state, nil)
+// 	if err != nil {
+// 		fmt.Printf("Failed to complete activity with error: %+v\n", err)
+// 	} else {
+// 		fmt.Printf("Successfully complete activity: %s\n", token)
+// 	}
+// }

@@ -35,8 +35,8 @@ const (
 	srcDirectory                  = "raw/"
 	processedDirectory            = "processed/"
 	blackHole                     = "blackHole/"
-	localDirectory                = "/Users/arpit/go/src/jobprocessor/videos/raw/"
-	localProcessedDirectory       = "/Users/arpit/go/src/jobprocessor/videos/processed/"
+	localDirectory                = "/tmp/"
+	localProcessedDirectory       = "/tmp/"
 )
 
 // This is registration process where you register all your activity handlers.
@@ -57,22 +57,24 @@ func init() {
 		compressFileActivity,
 		activity.RegisterOptions{Name: compressFileActivityName},
 	)
-	activity.RegisterWithOptions(
-		uploadFileActivity,
-		activity.RegisterOptions{Name: uploadFileActivityName},
-	)
-	activity.RegisterWithOptions(
-		migrateToColdLineActivity,
-		activity.RegisterOptions{Name: migrateToColdLineActivityName},
-	)
+	// activity.RegisterWithOptions(
+	// 	uploadFileActivity,
+	// 	activity.RegisterOptions{Name: uploadFileActivityName},
+	// )
+	// activity.RegisterWithOptions(
+	// 	migrateToColdLineActivity,
+	// 	activity.RegisterOptions{Name: migrateToColdLineActivityName},
+	// )
 }
 
 func createJobActivity(ctx context.Context, jobID string) error {
+	logger := activity.GetLogger(ctx)
+	logger.Info("Inside createJobActivity")
 	if len(jobID) == 0 {
 		return errors.New("job id is empty")
 	}
 
-	resp, err := http.Get(jobServerURL + "/cadence/job/create?is_api_call=true&id=" + jobID)
+	resp, err := http.Get(jobServerURL + "/workflow/job/start?is_api_call=true&id=" + jobID)
 
 	if err != nil {
 		return err
@@ -102,7 +104,7 @@ func waitForDecisionActivity(ctx context.Context, jobID string) (string, error) 
 	formData := url.Values{}
 	formData.Add("task_token", string(activityInfo.TaskToken))
 
-	registerCallbackURL := jobServerURL + "/cadence/job/register?id=" + jobID
+	registerCallbackURL := jobServerURL + "/workflow/job/register?id=" + jobID
 	resp, err := http.PostForm(registerCallbackURL, formData)
 	if err != nil {
 		logger.Info("waitForDecisionActivity failed to register callback.", zap.Error(err))
@@ -143,18 +145,18 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 func compressFileActivity(ctx context.Context, jobID string, filepath string, format model.Format) (string, error) {
 	var compressFlag string
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	logger.Info("processFileActivity started.", zap.String("FileName", filepath))
+	logger.Info("compressFileActivity started.", zap.String("FileName", filepath))
 
 	// process the file
 	fname, err := compressFile(ctx, filepath, format)
 
 	if err != nil {
-		logger.Error("processFileActivity failed to rename file.", zap.Error(err))
+		logger.Error("compressFileActivity failed to compress file.", zap.Error(err))
 		compressFlag := "FAILED"
 		return compressFlag, err
 	}
 
-	logger.Info("processFileActivity succeed.", zap.String("SavedFilePath", fname))
+	logger.Info("compressFileActivity succeed.", zap.String("SavedFilePath", fname))
 	compressFlag = "SUCCESS"
 	return compressFlag, nil
 }
@@ -234,21 +236,28 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 		preset, videoFormat := "medium", encode.VideoFormat
 		outputPath := localProcessedDirectory + encode.VideoCodec + "_" + encode.Size
 
-		encodeCmd = encodeCmd +
+		encodeCmd +=
 			" -pix_fmt " + pixelFormat +
-			" -vsync " + "1" +
-			" -vcodec " + videoCodec +
-			" -r " + strconv.Itoa(framerate) +
-			" -threads " + "0" +
-			" -b:v: " + bitRate +
-			" -bufsize " + bufferSize +
-			" -maxrate " + maxRate +
-			" -preset " + preset +
-			" -f " + videoFormat +
-			" -pass " + strconv.Itoa(pass)
+				" -movflags " + "faststart" +
+				" -vsync " + "1" +
+				" -vcodec " + videoCodec +
+				" -r " + strconv.Itoa(framerate) +
+				" -threads " + "0" +
+				" -b:v: " + bitRate +
+				" -bufsize " + bufferSize +
+				" -maxrate " + maxRate +
+				" -preset " + preset +
+				" -pass " + strconv.Itoa(pass) +
+				" -f " + videoFormat
 
 		if videoCodec == "libx265" {
-			encodeCmd = encodeCmd + " -tag:v " + tagVideo + " -y " + outputPath
+			encodeCmd += " -tag:v " + tagVideo
+		}
+
+		if pass == 0 {
+			encodeCmd += " /dev/null "
+		} else {
+			encodeCmd += " -y " + outputPath
 		}
 	}
 

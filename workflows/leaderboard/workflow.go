@@ -10,7 +10,7 @@ import (
 
 // ApplicationName is the name of the tasklist
 const (
-	jobServerURL    = "http://localhost:3030"
+	jobServerURL    = "http://localhost:4000"
 	TaskList        = "LeaderBoard"
 	ApplicationName = "LeaderBoardCalculator"
 )

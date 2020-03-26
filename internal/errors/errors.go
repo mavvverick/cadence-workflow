@@ -15,6 +15,10 @@ func (e *baseError) Error() string {
 	return e.message
 }
 
+func (e *baseError) GetCode() uint32 {
+	return e.code
+}
+
 // New ...
 func New(code uint32, message string) error {
 	return new(nil, code, message)
