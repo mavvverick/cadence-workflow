@@ -49,13 +49,15 @@ type VideoCodecParamters struct {
 
 // Format ...
 type Format struct {
-	Source string
-	Encode []Encode
+	Source      string
+	CallbackURL string
+	Encode      []Encode
 }
 
 //BuildFormat ...
 type BuildFormat interface {
 	SetFormatSource(string) BuildFormat
+	SetFormatCallbackURL(string) BuildFormat
 	SetFormatEncode([]Encode) BuildFormat
 	GetFormat() Format
 }
@@ -73,6 +75,12 @@ type VideoFormat struct {
 //SetFormatSource ...
 func (v *VideoFormat) SetFormatSource(s string) BuildFormat {
 	v.format.Source = s
+	return v
+}
+
+//SetFormatCallbackURL ...
+func (v *VideoFormat) SetFormatCallbackURL(s string) BuildFormat {
+	v.format.CallbackURL = s
 	return v
 }
 

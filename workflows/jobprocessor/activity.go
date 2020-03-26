@@ -57,14 +57,14 @@ func init() {
 		compressFileActivity,
 		activity.RegisterOptions{Name: compressFileActivityName},
 	)
-	// activity.RegisterWithOptions(
-	// 	uploadFileActivity,
-	// 	activity.RegisterOptions{Name: uploadFileActivityName},
-	// )
-	// activity.RegisterWithOptions(
-	// 	migrateToColdLineActivity,
-	// 	activity.RegisterOptions{Name: migrateToColdLineActivityName},
-	// )
+	activity.RegisterWithOptions(
+		uploadFileActivity,
+		activity.RegisterOptions{Name: uploadFileActivityName},
+	)
+	activity.RegisterWithOptions(
+		migrateToColdLineActivity,
+		activity.RegisterOptions{Name: migrateToColdLineActivityName},
+	)
 }
 
 func createJobActivity(ctx context.Context, jobID string) error {

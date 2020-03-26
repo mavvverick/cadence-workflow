@@ -50,6 +50,7 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, query *model.Query)
 	videoFormat := model.NewVideoFormat()
 	videoFormat.
 		SetFormatSource(query.Source).
+		SetFormatCallbackURL(query.CallbackURL).
 		SetFormatEncode(encodes).
 		GetFormat()
 

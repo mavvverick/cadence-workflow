@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/YOVO-LABS/workflow/api/model"
@@ -36,7 +35,6 @@ func (l *JobProcessorController) CreateJob(w http.ResponseWriter, r *http.Reques
 
 //ActionHandler ....
 func (l *JobProcessorController) ActionHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Inside ActionHandler")
 	_ = l.JobProcessorService.NotifyJobStateChange(w, r)
 	// l.WriteJSON(r, w, http.StatusOK, nil)
 

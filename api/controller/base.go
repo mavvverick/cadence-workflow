@@ -21,6 +21,14 @@ type BaseController struct {
 	Config config.AppConfig
 }
 
+//RespondWithJSON ..
+func (c *BaseController) RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, _ := json.Marshal(payload)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(response)
+}
+
 // WriteWithStatus ...
 func (c *BaseController) WriteWithStatus(w http.ResponseWriter, statusCode int) {
 	w.WriteHeader(statusCode)
