@@ -102,7 +102,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, &encodeFlag)
 
-	if encodeFlag == "SUCESS" {
+	if encodeFlag == "SUCCEED" {
 		callback.SendSucessMessage("Compression Successful")
 	}
 
