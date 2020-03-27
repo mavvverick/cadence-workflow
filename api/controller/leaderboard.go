@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/YOVO-LABS/workflow/api/model"
-	"github.com/YOVO-LABS/workflow/api/service"
+	"github.com/YOVO-LABS/workflow/internal/service"
 )
 
 // LeaderboardController ...

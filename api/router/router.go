@@ -57,5 +57,4 @@ func (h *router) Routes(container *dicontainer.ServiceContainer) {
 	})
 
 	h.mux.NotFound(container.HTTPErrorController.ResourceNotFound)
-	// h.mux.With(RemoveContextTypeJSON).Get("/swagger/*", HTTPSwagger.WrapHandler)
 }

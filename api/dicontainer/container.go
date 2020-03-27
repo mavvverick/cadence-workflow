@@ -2,9 +2,9 @@ package dicontainer
 
 import (
 	"github.com/YOVO-LABS/workflow/api/controller"
-	"github.com/YOVO-LABS/workflow/api/service"
 	"github.com/YOVO-LABS/workflow/config"
 	"github.com/YOVO-LABS/workflow/internal/adapter"
+	"github.com/YOVO-LABS/workflow/internal/service"
 )
 
 // ServiceContainer resolve all dependencies between controller, service, infrastructure except application level dependencies such us logging, config and etc ...
@@ -41,8 +41,10 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 	jobprocessorService := &service.JobProcessorService{CadenceAdapter: cadenceClient, Logger: container.config.Logger}
 
 	//Initializing controllers
+	container.HTTPErrorController = &controller.HTTPErrorController{BaseController: baseController}
 	container.LeaderboardController = &controller.LeaderboardController{BaseController: baseController,
 		LeaderboardService: leaderboardService}
 	container.JobProcessorController = &controller.JobProcessorController{BaseController: baseController,
 		JobProcessorService: jobprocessorService}
+
 }

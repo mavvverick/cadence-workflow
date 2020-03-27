@@ -46,7 +46,6 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 //ListHandler ...
 func ListHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(AllExpense)
 	fmt.Fprint(w, "<h1>Job Processing SYSTEM</h1>"+"<a href=\"/workflow/job/list\">HOME</a>"+
 		"<h3>All Job requests:</h3><table border=1><tr><th>Job ID</th><th>Status</th><th>Action</th>")
 	keys := []string{}
@@ -70,7 +69,6 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 
 //StartJobHandler ...
 func StartJobHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("inside StartJobHandler")
 	isAPICall := r.URL.Query().Get("is_api_call") == "true"
 	id := r.URL.Query().Get("id")
 	_, ok := AllExpense[id]

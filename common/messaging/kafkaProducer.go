@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"fmt"
 
 	kafka "github.com/segmentio/kafka-go"
 )
@@ -15,7 +14,6 @@ type KafkaProducer struct {
 //NewProducer creates a producer object
 func NewProducer(kc *KafkaConfig, cluster, topic string) *KafkaProducer {
 	brokers := kc.getBrokersForKafkaCluster(cluster)
-	fmt.Println(brokers)
 	writer := kafka.NewWriter(
 		kafka.WriterConfig{
 			Brokers: brokers,

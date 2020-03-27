@@ -27,9 +27,9 @@ func init() {
 // Workflow workflow
 func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
 	creationActivityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute * 10,
-		StartToCloseTimeout:    time.Minute * 10,
-		HeartbeatTimeout:       time.Second * 20,
+		ScheduleToStartTimeout: time.Hour * 24,
+		StartToCloseTimeout:    time.Hour * 24,
+		HeartbeatTimeout:       time.Hour * 24,
 	}
 
 	createJobContext := workflow.WithActivityOptions(ctx, creationActivityOptions)
@@ -38,8 +38,8 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	createJoblogger.Info(format.Source)
 
 	sessionOptions := &workflow.SessionOptions{
-		CreationTimeout:  time.Minute * 10,
-		ExecutionTimeout: time.Minute * 10,
+		CreationTimeout:  time.Hour * 24,
+		ExecutionTimeout: time.Hour * 24,
 	}
 	createJobSessionCtx, err := workflow.CreateSession(createJobContext, sessionOptions)
 	if err != nil {
@@ -56,15 +56,15 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	callback := handler.NewErrorHandler(format.CallbackURL)
 
 	processingActivityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute * 10,
-		StartToCloseTimeout:    time.Minute * 10,
+		ScheduleToStartTimeout: time.Hour * 24,
+		StartToCloseTimeout:    time.Hour * 24,
 	}
 	processJobContext := workflow.WithActivityOptions(ctx, processingActivityOptions)
 	logger := workflow.GetLogger(processJobContext)
 
 	processJobSessionOptions := &workflow.SessionOptions{
-		CreationTimeout:  time.Minute * 10,
-		ExecutionTimeout: time.Minute * 10,
+		CreationTimeout:  time.Hour * 24,
+		ExecutionTimeout: time.Hour * 24,
 	}
 
 	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)
@@ -96,16 +96,10 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		logger.Info("Workflow completed with failed downloadFileActivity", zap.Error(err))
 		return "", err
 	}
-	callback.SendSucessMessage("Download Successful")
 
 	var encodeFlag string
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, &encodeFlag)
-
-	if encodeFlag == "SUCCEED" {
-		callback.SendSucessMessage("Compression Successful")
-	}
-
 	if err != nil || encodeFlag == "FAILED" {
 		callback.SendErrorMessage(err.Error())
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
@@ -119,7 +113,6 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
 		return "", err
 	}
-	callback.SendSucessMessage("Upload Successful")
 
 	err = workflow.ExecuteActivity(processJobSessionContext, migrateToColdLineActivity,
 		jobID, format).Get(processJobSessionContext, nil)
@@ -129,7 +122,8 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		logger.Info("Workflow completed with failed migrateToColdLineActivity", zap.Error(err))
 		return "", err
 	}
-	callback.SendSucessMessage("MigrateToColdLineActivity Successful")
+
+	callback.SendSucessMessage("Workflow Execution Successful")
 
 	return "COMPLETED", nil
 }

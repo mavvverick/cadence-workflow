@@ -3,21 +3,40 @@ package main
 import (
 	"flag"
 
-	app "github.com/YOVO-LABS/workflow/cmd/server"
+	server "github.com/YOVO-LABS/workflow/cmd/server"
+	worker "github.com/YOVO-LABS/workflow/cmd/workflow"
 )
 
 func main() {
+	var service string
 	var configFilePath string
 	var serverPort string
+	var tasklist string
+
+	flag.StringVar(&service, "service", "", "Name of the service to start (app server or workflow workerworker)")
 	flag.StringVar(&configFilePath, "config", "./config", "absolute path to the configuration file")
-	flag.StringVar(&serverPort, "server_port", "4000", "port on which server runs")
+	flag.StringVar(&serverPort, "port", "4000", "port on which server runs")
+	flag.StringVar(&tasklist, "tasklist", "", "Name of the tasklist")
 	flag.Parse()
 
-	application := app.New(configFilePath)
+	if service == "app" {
 
-	// init necessary module before start
-	application.Init()
+		application := server.New(configFilePath)
 
-	// start http server
-	application.Start(serverPort)
+		// init necessary module before start
+		application.Init()
+
+		// start http server
+		application.Start(serverPort)
+
+	} else if service == "worker" {
+
+		worker := worker.New(configFilePath)
+		worker.Init(tasklist)
+		worker.Start()
+
+		// The workers are supposed to be long running process that should not exit.
+		select {}
+	}
+
 }

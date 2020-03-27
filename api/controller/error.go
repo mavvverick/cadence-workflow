@@ -16,5 +16,5 @@ type HTTPErrorController struct {
 //ResourceNotFound ...
 func (c *HTTPErrorController) ResourceNotFound(w http.ResponseWriter, r *http.Request) {
 	err := errors.New(codes.NotFound, constant.ResourceNotFound)
-	c.RespondWithJSON(w, http.StatusBadRequest, err)
+	c.WriteError(r, w, err)
 }

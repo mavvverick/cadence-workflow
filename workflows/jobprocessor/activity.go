@@ -255,7 +255,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 		}
 
 		if pass == 0 {
-			encodeCmd += " /dev/null "
+			encodeCmd += " /dev/null -y"
 		} else {
 			encodeCmd += " -y " + outputPath
 		}

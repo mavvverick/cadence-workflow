@@ -9,7 +9,7 @@ import (
 	"github.com/YOVO-LABS/workflow/config"
 	"github.com/YOVO-LABS/workflow/internal/adapter"
 
-	lb "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
+	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
 
 	"github.com/google/uuid"
 	"go.uber.org/cadence/client"
@@ -44,8 +44,8 @@ func (l *LeaderboardService) CreateCron(ctx context.Context, cronTime string) (*
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                              "leaderBoardProcess_" + uuid.New().String(),
 		TaskList:                        lb.TaskList,
-		ExecutionStartToCloseTimeout:    time.Hour * 2,
-		DecisionTaskStartToCloseTimeout: time.Hour * 2,
+		ExecutionStartToCloseTimeout:    time.Hour * 24,
+		DecisionTaskStartToCloseTimeout: time.Hour * 24,
 		CronSchedule:                    cronTime,
 	}
 

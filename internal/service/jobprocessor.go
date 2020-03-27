@@ -57,8 +57,8 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, query *model.Query)
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                              "jobProcessing_" + uuid.New().String(),
 		TaskList:                        jp.TaskList,
-		ExecutionStartToCloseTimeout:    time.Minute * 5,
-		DecisionTaskStartToCloseTimeout: time.Minute * 5,
+		ExecutionStartToCloseTimeout:    time.Hour * 24,
+		DecisionTaskStartToCloseTimeout: time.Minute * 24,
 	}
 
 	execution, err := b.CadenceAdapter.CadenceClient.StartWorkflow(
@@ -76,8 +76,6 @@ func (b *JobProcessorService) NotifyJobStateChange(w http.ResponseWriter, r *htt
 	isAPICall := r.URL.Query().Get("is_api_call") == "true"
 	id := r.URL.Query().Get("id")
 	actionType := r.URL.Query().Get("type")
-
-	fmt.Println(id, actionType, isAPICall)
 
 	allExpense := handler.AllExpense
 	oldState, ok := allExpense[id]
