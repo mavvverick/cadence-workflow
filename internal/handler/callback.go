@@ -34,7 +34,7 @@ func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, pa
 	}
 
 	requestBody := fmt.Sprintf(
-		`{"status":{"status": %v, "callback_type": %v, "task_token": %v, "event": %v, "payload: %v`,
+		`{"status":{"status": "%v", "callback_type": "%v", "task_token": "%v", "event": "%v", "payload": %v}}`,
 		status,
 		callbackType,
 		token,
@@ -52,5 +52,4 @@ func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, pa
 	}
 
 	defer resp.Body.Close()
-
 }
