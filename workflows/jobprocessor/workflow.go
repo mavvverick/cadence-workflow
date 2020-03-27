@@ -53,7 +53,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		return "", err
 	}
 
-	callback := handler.NewErrorHandler(format.CallbackURL)
+	cb := handler.NewCallbackInfo(format.CallbackURL)
 
 	processingActivityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Hour * 24,
@@ -77,12 +77,12 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	err = workflow.ExecuteActivity(processJobSessionContext, waitForDecisionActivity,
 		jobID).Get(processJobSessionContext, &status)
 	if err != nil {
-		callback.SendErrorMessage(err.Error())
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		return "", err
 	}
 
 	if status != "APPROVED" {
-		callback.SendErrorMessage(status)
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed.", zap.String("JobStatus", status))
 		return "", nil
 	}
@@ -92,7 +92,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		jobID, format.Source).Get(processJobSessionContext, &filePath)
 
 	if err != nil {
-		callback.SendErrorMessage(err.Error())
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed downloadFileActivity", zap.Error(err))
 		return "", err
 	}
@@ -101,7 +101,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, &encodeFlag)
 	if err != nil || encodeFlag == "FAILED" {
-		callback.SendErrorMessage(err.Error())
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
 		return "", err
 	}
@@ -109,7 +109,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
 		jobID, format).Get(processJobSessionContext, nil)
 	if err != nil {
-		callback.SendErrorMessage(err.Error())
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
 		return "", err
 	}
@@ -118,12 +118,12 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		jobID, format).Get(processJobSessionContext, nil)
 
 	if err != nil {
-		callback.SendErrorMessage(err.Error())
+		cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed migrateToColdLineActivity", zap.Error(err))
 		return "", err
 	}
 
-	callback.SendSucessMessage("Workflow Execution Successful")
+	cb.PushMessage("COMPLETED", "task", jobID, "error", format.Encode)
 
 	return "COMPLETED", nil
 }

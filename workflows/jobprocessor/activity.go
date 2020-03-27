@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/YOVO-LABS/workflow/api/model"
+	"google.golang.org/api/option"
 
 	"cloud.google.com/go/storage"
 	"go.uber.org/cadence/activity"
@@ -345,7 +346,8 @@ func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) e
 
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
+	client, err := storage.NewClient(ctx,
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
 	if err != nil {
 		return err
 	}
