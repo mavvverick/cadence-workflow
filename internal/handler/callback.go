@@ -20,29 +20,43 @@ type CallbackInfo struct {
 }
 
 //NewCallbackInfo ...
-func NewCallbackInfo(url string) *CallbackInfo {
+func NewCallbackInfo(format *model.Format) *CallbackInfo {
 	return &CallbackInfo{
-		URL: url,
+		URL:     format.CallbackURL,
+		Payload: format.Payload,
 	}
 }
 
+type webhookMessage struct {
+	Status       string `json:"status"`
+	CallbackType string `json:"callback_type"`
+	TaskToken    string `json:"task_token"`
+	Event        string `json:"event"`
+	Payload      string `json:"payload"`
+	ErrorCode    int    `json:"error_code,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+}
+
 //PushMessage ...
-func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, payload []model.Encode) {
-	pl, err := json.Marshal(&payload)
-	if err != nil {
-		panic(err)
+func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, format []model.Encode) {
+	requestBody := &webhookMessage{
+		Status:       fmt.Sprintf(`{"status":"%v"}`, status),
+		CallbackType: callbackType,
+		TaskToken:    token,
+		Event:        event,
+		Payload:      e.Payload,
 	}
 
-	requestBody := fmt.Sprintf(
-		`{"status":{"status": %v, "callback_type": %v, "task_token": %v, "event": %v, "payload: %v`,
-		status,
-		callbackType,
-		token,
-		event,
-		string(pl))
+	if event == "error" {
+		requestBody.ErrorCode = 500
+		requestBody.ErrorMessage = status
+	}
 
-	jsonStr := []byte(requestBody)
-	req, err := http.NewRequest("POST", e.URL, bytes.NewBuffer(jsonStr))
+	body, err := json.Marshal(requestBody)
+	if err != nil {
+		fmt.Println("err")
+	}
+	req, err := http.NewRequest("POST", e.URL, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -52,5 +66,4 @@ func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, pa
 	}
 
 	defer resp.Body.Close()
-
 }

@@ -46,10 +46,12 @@ func init() {
 		createJobActivity,
 		activity.RegisterOptions{Name: createJobActivityName},
 	)
-	activity.RegisterWithOptions(
-		waitForDecisionActivity,
-		activity.RegisterOptions{Name: waitForDecisionActivityName},
-	)
+
+	// activity.RegisterWithOptions(
+	// 	waitForDecisionActivity,
+	// 	activity.RegisterOptions{Name: waitForDecisionActivityName},
+	// )
+
 	activity.RegisterWithOptions(
 		downloadFileActivity,
 		activity.RegisterOptions{Name: downloadFileActivityName},
@@ -136,7 +138,6 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 	logger.Info("Downloading file...", zap.String("File URL", url))
 
 	fpath, err := downloadFile(ctx, url)
-
 	if err != nil {
 		return "", err
 	}
@@ -280,7 +281,7 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 func uploadFile(ctx context.Context, format model.Format) error {
 	gsContext := context.Background()
 	storageClient, err := storage.NewClient(gsContext,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return err
 	}
@@ -310,7 +311,7 @@ func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) e
 	defer cancel()
 
 	storageClient, err := storage.NewClient(gsContext,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return nil
 	}
@@ -350,7 +351,7 @@ func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) e
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return err
 	}
