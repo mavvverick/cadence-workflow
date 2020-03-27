@@ -279,10 +279,12 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 
 func uploadFile(ctx context.Context, format model.Format) error {
 	gsContext := context.Background()
-	storageClient, err := storage.NewClient(gsContext)
+	storageClient, err := storage.NewClient(gsContext,
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
 	if err != nil {
 		return err
 	}
+	defer storageClient.Close()
 	for _, encode := range format.Encode {
 		bucket := strings.Split(strings.Split(encode.Destination, ".")[0], "//")[1]
 		object := strings.Split(encode.Destination, ".com/")[1]
@@ -307,11 +309,12 @@ func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) e
 	gsContext, cancel := context.WithTimeout(gsContext, time.Second*10)
 	defer cancel()
 
-	storageClient, err := storage.NewClient(gsContext)
-
+	storageClient, err := storage.NewClient(gsContext,
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
 	if err != nil {
 		return nil
 	}
+	defer storageClient.Close()
 
 	bucket := strings.Split(strings.Split(encode.Source, ".")[0], "//")[1]
 	gcsObject := strings.Split(encode.Source, ".com/")[1]
@@ -351,6 +354,7 @@ func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 
 	readContext, err := client.Bucket(bucket).Object(object).NewReader(ctx)
 	if err != nil {
