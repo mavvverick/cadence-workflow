@@ -284,6 +284,7 @@ func uploadFile(ctx context.Context, format model.Format) error {
 		filepath := localProcessedDirectory + encode.VideoCodec + "_" + encode.Size
 		file, err := os.Open(filepath)
 		writeContext := storageClient.Bucket(bucket).Object(object).NewWriter(gsContext)
+		writeContext.ACL = []storage.ACLRule{{Role: storage.RoleReader, Entity: storage.AllUsers}}
 		if _, err = io.Copy(writeContext, file); err != nil {
 			return err
 		}
