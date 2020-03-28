@@ -9,6 +9,7 @@ require (
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/google/uuid v1.1.1
 	github.com/jinzhu/gorm v1.9.12
+	github.com/joho/godotenv v1.3.0
 	github.com/pborman/uuid v1.2.0
 	github.com/segmentio/kafka-go v0.3.5
 	github.com/shopspring/decimal v0.0.0-20200227202807-02e2044944cc
@@ -17,6 +18,7 @@ require (
 	go.uber.org/cadence v0.11.2
 	go.uber.org/yarpc v1.44.0
 	go.uber.org/zap v1.14.1
+	google.golang.org/api v0.18.0
 	gopkg.in/validator.v2 v2.0.0-20191107172027-c3144fdedc21
 )
 

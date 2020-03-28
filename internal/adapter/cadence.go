@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"os"
 
 	config "github.com/YOVO-LABS/workflow/config"
 
@@ -36,8 +37,8 @@ func (h *CadenceAdapter) Setup(config *config.CadenceConfig) {
 	h.Logger = logger
 	h.Config = *config
 
-	hostPort := h.Config.HostPort
-	domainName := h.Config.Domain
+	hostPort := os.Getenv("CADENCE_HOST")
+	domainName := os.Getenv("CADENCE_DOMAIN")
 
 	h.Builder = NewBuilder(logger, hostPort, domainName)
 

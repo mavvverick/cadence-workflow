@@ -46,11 +46,11 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, query *model.Query)
 			GetEncode()
 		encodes = append(encodes, mp4EncodeParams.GetEncode())
 	}
-
 	videoFormat := model.NewVideoFormat()
 	videoFormat.
 		SetFormatSource(query.Source).
 		SetFormatCallbackURL(query.CallbackURL).
+		SetFormatPayload(query.Payload).
 		SetFormatEncode(encodes).
 		GetFormat()
 

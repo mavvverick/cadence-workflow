@@ -46,10 +46,12 @@ func init() {
 		createJobActivity,
 		activity.RegisterOptions{Name: createJobActivityName},
 	)
-	activity.RegisterWithOptions(
-		waitForDecisionActivity,
-		activity.RegisterOptions{Name: waitForDecisionActivityName},
-	)
+
+	// activity.RegisterWithOptions(
+	// 	waitForDecisionActivity,
+	// 	activity.RegisterOptions{Name: waitForDecisionActivityName},
+	// )
+
 	activity.RegisterWithOptions(
 		downloadFileActivity,
 		activity.RegisterOptions{Name: downloadFileActivityName},
@@ -136,7 +138,6 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 	logger.Info("Downloading file...", zap.String("File URL", url))
 
 	fpath, err := downloadFile(ctx, url)
-
 	if err != nil {
 		return "", err
 	}
@@ -175,9 +176,9 @@ func uploadFileActivity(ctx context.Context, jobID string, format model.Format) 
 	return nil
 }
 
-func migrateToColdLineActivity(ctx context.Context, jobID string, encode model.Encode) error {
+func migrateToColdLineActivity(ctx context.Context, jobID string, encode model.Format) error {
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	logger.Info("migrateToColdline begin...", zap.String("file to move", encode.Source))
+	logger.Info("migrateToColdline begin...")
 
 	err := migrateToColdline(ctx, jobID, encode)
 	if err != nil {
@@ -280,7 +281,7 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 func uploadFile(ctx context.Context, format model.Format) error {
 	gsContext := context.Background()
 	storageClient, err := storage.NewClient(gsContext,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return err
 	}
@@ -303,21 +304,21 @@ func uploadFile(ctx context.Context, format model.Format) error {
 	return nil
 }
 
-func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) error {
+func migrateToColdline(ctx context.Context, jobID string, format model.Format) error {
 	gsContext := context.Background()
 
-	gsContext, cancel := context.WithTimeout(gsContext, time.Second*10)
+	gsContext, cancel := context.WithTimeout(gsContext, time.Minute*10)
 	defer cancel()
 
 	storageClient, err := storage.NewClient(gsContext,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return nil
 	}
 	defer storageClient.Close()
 
-	bucket := strings.Split(strings.Split(encode.Source, ".")[0], "//")[1]
-	gcsObject := strings.Split(encode.Source, ".com/")[1]
+	bucket := strings.Split(strings.Split(format.Source, ".")[0], "//")[1]
+	gcsObject := strings.Split(format.Source, ".com/")[1]
 
 	src := storageClient.Bucket(bucket).Object(gcsObject)
 	dst := storageClient.Bucket(bucket).Object(blackHole + gcsObject)
@@ -344,13 +345,13 @@ func migrateToColdline(ctx context.Context, jobID string, encode model.Encode) e
 		return nil
 	}
 
-	return errors.New(string(body))
+	return nil
 }
 
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON_KEY"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return err
 	}

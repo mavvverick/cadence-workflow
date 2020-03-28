@@ -5,6 +5,7 @@ import "context"
 // Query ....
 type Query struct {
 	Source      string `json:"source"`
+	Payload     string `json:"payload"`
 	CallbackURL string `json:"callback_url"`
 	Format      []*FormatBody
 }
@@ -51,6 +52,7 @@ type VideoCodecParamters struct {
 type Format struct {
 	Source      string
 	CallbackURL string
+	Payload     string
 	Encode      []Encode
 }
 
@@ -58,6 +60,7 @@ type Format struct {
 type BuildFormat interface {
 	SetFormatSource(string) BuildFormat
 	SetFormatCallbackURL(string) BuildFormat
+	SetFormatPayload(string) BuildFormat
 	SetFormatEncode([]Encode) BuildFormat
 	GetFormat() Format
 }
@@ -75,6 +78,12 @@ type VideoFormat struct {
 //SetFormatSource ...
 func (v *VideoFormat) SetFormatSource(s string) BuildFormat {
 	v.format.Source = s
+	return v
+}
+
+//SetFormatPayload ...
+func (v *VideoFormat) SetFormatPayload(s string) BuildFormat {
+	v.format.Payload = s
 	return v
 }
 
