@@ -15,7 +15,7 @@ type JobProcessorController struct {
 
 // CreateJob ...
 func (l *JobProcessorController) CreateJob(w http.ResponseWriter, r *http.Request) {
-	var req model.Query
+	var req model.QueryParams
 
 	err := l.decodeAndValidate(r, &req)
 	if err != nil {

@@ -2,6 +2,11 @@ package model
 
 import "context"
 
+// QueryParams ....
+type QueryParams struct {
+	Query *Query `json:"query"`
+}
+
 // Query ....
 type Query struct {
 	Source      string `json:"source"`
@@ -107,7 +112,7 @@ func (v *VideoFormat) GetFormat() Format {
 }
 
 // Validate ...
-func (c *Query) Validate(ctx context.Context) error {
+func (c *QueryParams) Validate(ctx context.Context) error {
 	return ValidateFields(c)
 }
 

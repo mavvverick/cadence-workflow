@@ -49,7 +49,8 @@ func (h *router) Routes(container *dicontainer.ServiceContainer) {
 		r.Post("/workflow/cron/create", container.LeaderboardController.CreateCron)
 		r.Post("/workflow/terminate", container.LeaderboardController.TerminateCron)
 
-		r.Post("/workflow/job/create", container.JobProcessorController.CreateJob)
+		r.Post("/v1/start_encode2", container.JobProcessorController.CreateJob)
+		// r.Post("/workflow/job/create", container.JobProcessorController.CreateJob)
 		r.Get("/workflow/job/start", handler.StartJobHandler)
 		r.Post("/workflow/job/register", handler.CallbackHandler)
 		r.Get("/workflow/job/action", container.JobProcessorController.ActionHandler)

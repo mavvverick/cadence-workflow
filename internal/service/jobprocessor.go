@@ -19,7 +19,7 @@ import (
 
 //JobProcessorInterface ...
 type JobProcessorInterface interface {
-	CreateJob(ctx context.Context, query *model.Query) (*workflow.Execution, error)
+	CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error)
 	NotifyJobStateChange(w http.ResponseWriter, r *http.Request) error
 }
 
@@ -30,8 +30,9 @@ type JobProcessorService struct {
 }
 
 // CreateJob ...
-func (b *JobProcessorService) CreateJob(ctx context.Context, query *model.Query) (*workflow.Execution, error) {
+func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error) {
 	var encodes []model.Encode
+	query := queryParams.Query
 	for _, format := range query.Format {
 		mp4EncodeParams := model.NewMP4Encode()
 		mp4EncodeParams.

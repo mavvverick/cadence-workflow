@@ -64,10 +64,11 @@ func init() {
 		uploadFileActivity,
 		activity.RegisterOptions{Name: uploadFileActivityName},
 	)
-	activity.RegisterWithOptions(
-		migrateToColdLineActivity,
-		activity.RegisterOptions{Name: migrateToColdLineActivityName},
-	)
+
+	// activity.RegisterWithOptions(
+	// 	migrateToColdLineActivity,
+	// 	activity.RegisterOptions{Name: migrateToColdLineActivityName},
+	// )
 }
 
 func createJobActivity(ctx context.Context, jobID string) error {
@@ -176,18 +177,6 @@ func uploadFileActivity(ctx context.Context, jobID string, format model.Format) 
 	return nil
 }
 
-func migrateToColdLineActivity(ctx context.Context, jobID string, encode model.Format) error {
-	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	logger.Info("migrateToColdline begin...")
-
-	err := migrateToColdline(ctx, jobID, encode)
-	if err != nil {
-		logger.Error("migrateToColdline uploading failed.", zap.Error(err))
-		return err
-	}
-	return nil
-}
-
 func downloadFile(ctx context.Context, url string) (string, error) {
 
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
@@ -287,8 +276,11 @@ func uploadFile(ctx context.Context, format model.Format) error {
 	}
 	defer storageClient.Close()
 	for _, encode := range format.Encode {
-		bucket := strings.Split(strings.Split(encode.Destination, ".")[0], "//")[1]
-		object := strings.Split(encode.Destination, ".com/")[1]
+		// bucket := strings.Split(strings.Split(encode.Destination, ".")[0], "//")[1]
+		// object := strings.Split(encode.Destination, ".com/")[1]
+		pathArr := strings.Split(encode.Destination, "/")
+		bucket := pathArr[3]
+		object := strings.Split(encode.Destination, pathArr[3]+"/")[1]
 		filepath := localProcessedDirectory + encode.VideoCodec + "_" + encode.Size
 		file, err := os.Open(filepath)
 		writeContext := storageClient.Bucket(bucket).Object(object).NewWriter(gsContext)
@@ -326,6 +318,7 @@ func migrateToColdline(ctx context.Context, jobID string, format model.Format) e
 	if _, err := dst.CopierFrom(src).Run(gsContext); err != nil {
 		return err
 	}
+
 	if err := src.Delete(gsContext); err != nil {
 		return err
 	}

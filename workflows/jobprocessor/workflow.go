@@ -113,13 +113,14 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		return "", err
 	}
 
-	err = workflow.ExecuteActivity(processJobSessionContext, migrateToColdLineActivity,
-		jobID, format).Get(processJobSessionContext, nil)
-	if err != nil {
-		logger.Info("Workflow completed with failed migrateToColdLineActivity", zap.Error(err))
-		return "", err
-	}
-
 	cb.PushMessage("COMPLETED", "task", jobID, "saved", format.Encode)
+
+	// err = workflow.ExecuteActivity(processJobSessionContext, migrateToColdLineActivity,
+	// 	jobID, format).Get(processJobSessionContext, nil)
+	// if err != nil {
+	// 	logger.Info("Workflow completed with failed migrateToColdLineActivity", zap.Error(err))
+	// 	return "", err
+	// }
+
 	return "COMPLETED", nil
 }
