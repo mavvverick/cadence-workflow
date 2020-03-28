@@ -181,7 +181,7 @@ func downloadFile(ctx context.Context, url string) (string, error) {
 
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
 	object := strings.Split(url, ".com/")[1]
-	localFileName := localDirectory + strings.Split(object, "/")[2]
+	localFileName := localDirectory + strings.Split(object, "/")[0] + "_" + strings.Split(object, "/")[2]
 
 	err := downloadObjectToLocal(bucket, object, localFileName)
 	if err != nil {
