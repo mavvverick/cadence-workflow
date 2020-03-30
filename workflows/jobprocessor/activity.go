@@ -193,7 +193,7 @@ func downloadFile(ctx context.Context, url string) (string, error) {
 
 func compressFile(ctx context.Context, filepath string, format model.Format) (string, error) {
 	// Two pass encoding
-	encodeCmdPass0 := createEncodeCommand(filepath, 0, format.Encode)
+	encodeCmdPass0 := createEncodeCommand(filepath, 1, format.Encode)
 	fmt.Println(encodeCmdPass0)
 	argsPass0 := strings.Fields(encodeCmdPass0)
 	cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
@@ -204,7 +204,7 @@ func compressFile(ctx context.Context, filepath string, format model.Format) (st
 		}
 	}
 
-	encodeCmdPass1 := createEncodeCommand(filepath, 1, format.Encode)
+	encodeCmdPass1 := createEncodeCommand(filepath, 2, format.Encode)
 	fmt.Println(encodeCmdPass1)
 	argsPass1 := strings.Fields(encodeCmdPass1)
 	cmdPass1 := exec.Command(argsPass1[0], argsPass1[1:]...)
@@ -239,13 +239,14 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 				" -maxrate " + maxRate +
 				" -preset " + preset +
 				" -pass " + strconv.Itoa(pass) +
-				" -f " + videoFormat
+				" -f " + videoFormat +
+				" -passlogfile " + fmt.Sprintf("%v_%v_%v", filepath, videoCodec, encode.Size)
 
 		if videoCodec == "libx265" {
 			encodeCmd += " -tag:v " + tagVideo
 		}
 
-		if pass == 0 {
+		if pass == 1 {
 			encodeCmd += " /dev/null -y"
 		} else {
 			encodeCmd += " -y " + outputPath
