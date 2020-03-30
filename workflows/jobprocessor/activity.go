@@ -146,7 +146,7 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 }
 
 func compressFileActivity(ctx context.Context, jobID string, filepath string, format model.Format) (string, error) {
-	var compressFlag string
+	// var compressFlag string
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 	logger.Info("compressFileActivity started.", zap.String("FileName", filepath))
 
@@ -155,21 +155,21 @@ func compressFileActivity(ctx context.Context, jobID string, filepath string, fo
 
 	if err != nil {
 		logger.Error("compressFileActivity failed to compress file.", zap.Error(err))
-		compressFlag := "FAILED"
-		return compressFlag, err
+		// compressFlag := "FAILED"
+		return "", err
 	}
 
 	logger.Info("compressFileActivity succeed.", zap.String("SavedFilePath", fname))
-	compressFlag = "SUCCESS"
-	return compressFlag, nil
+	// compressFlag = "SUCCESS"
+	return fname, nil
 }
 
-func uploadFileActivity(ctx context.Context, jobID string, format model.Format) error {
+func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.Format) error {
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 	logger.Info("uploadFileActivity begin", zap.String("FileName", localProcessedDirectory))
 
 	// upload the file
-	err := uploadFile(ctx, format)
+	err := uploadFile(ctx, fpath, format)
 	if err != nil {
 		return err
 	}
@@ -188,12 +188,12 @@ func downloadFile(ctx context.Context, url string) (string, error) {
 		return "", err
 	}
 
-	return localFileName, nil
+	return strings.Split(localFileName, ".")[0], nil
 }
 
 func compressFile(ctx context.Context, filepath string, format model.Format) (string, error) {
 	// Two pass encoding
-	encodeCmdPass0 := createEncodeCommand(filepath, 1, format.Encode)
+	encodeCmdPass0, _ := createEncodeCommand(filepath, 1, format.Encode)
 	fmt.Println(encodeCmdPass0)
 	argsPass0 := strings.Fields(encodeCmdPass0)
 	cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
@@ -204,7 +204,7 @@ func compressFile(ctx context.Context, filepath string, format model.Format) (st
 		}
 	}
 
-	encodeCmdPass1 := createEncodeCommand(filepath, 2, format.Encode)
+	encodeCmdPass1, outputPath := createEncodeCommand(filepath, 2, format.Encode)
 	fmt.Println(encodeCmdPass1)
 	argsPass1 := strings.Fields(encodeCmdPass1)
 	cmdPass1 := exec.Command(argsPass1[0], argsPass1[1:]...)
@@ -212,11 +212,11 @@ func compressFile(ctx context.Context, filepath string, format model.Format) (st
 	if errPass1 != nil {
 		return "", errPass1
 	}
-	return "", nil
+	return outputPath, nil
 }
 
-func createEncodeCommand(filepath string, pass int, encodes []model.Encode) string {
-	encodeCmd := "ffmpeg" + " -i " + filepath
+func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (encodeCmd string, outputPath string) {
+	encodeCmd = "ffmpeg" + " -i " + filepath + ".mp4"
 
 	for _, encode := range encodes {
 		pixelFormat := "yuv420p"
@@ -225,7 +225,9 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 		videoCodec, framerate, tagVideo := encode.VideoCodec, encode.FrameRate, "hvc1"
 		bitRate, bufferSize, maxRate := rate, rate, rate
 		preset, videoFormat := "medium", encode.VideoFormat
-		outputPath := localProcessedDirectory + encode.VideoCodec + "_" + encode.Size
+
+		outputPath := filepath + "_" + encode.VideoCodec + "_" + encode.Size
+		fmt.Println(outputPath)
 
 		encodeCmd +=
 			" -pix_fmt " + pixelFormat +
@@ -240,7 +242,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 				" -preset " + preset +
 				" -pass " + strconv.Itoa(pass) +
 				" -f " + videoFormat +
-				" -passlogfile " + fmt.Sprintf("%v_%v_%v", filepath, videoCodec, encode.Size)
+				" -passlogfile " + outputPath
 
 		if videoCodec == "libx265" {
 			encodeCmd += " -tag:v " + tagVideo
@@ -253,7 +255,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) stri
 		}
 	}
 
-	return encodeCmd
+	return
 }
 
 func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
@@ -268,7 +270,7 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 	return nil
 }
 
-func uploadFile(ctx context.Context, format model.Format) error {
+func uploadFile(ctx context.Context, fpath string, format model.Format) error {
 	gsContext := context.Background()
 	storageClient, err := storage.NewClient(gsContext,
 		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
@@ -282,7 +284,7 @@ func uploadFile(ctx context.Context, format model.Format) error {
 		pathArr := strings.Split(encode.Destination, "/")
 		bucket := pathArr[3]
 		object := strings.Split(encode.Destination, pathArr[3]+"/")[1]
-		filepath := localProcessedDirectory + encode.VideoCodec + "_" + encode.Size
+		filepath := fpath + "_" + encode.VideoCodec + "_" + encode.Size
 		file, err := os.Open(filepath)
 		writeContext := storageClient.Bucket(bucket).Object(object).NewWriter(gsContext)
 		writeContext.ACL = []storage.ACLRule{{Role: storage.RoleReader, Entity: storage.AllUsers}}

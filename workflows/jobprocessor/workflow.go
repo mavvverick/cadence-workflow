@@ -106,7 +106,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	}
 
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
-		jobID, format).Get(processJobSessionContext, nil)
+		jobID, filePath, format).Get(processJobSessionContext, nil)
 	if err != nil {
 		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
