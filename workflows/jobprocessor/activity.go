@@ -18,6 +18,8 @@ import (
 	"github.com/YOVO-LABS/workflow/api/model"
 	"google.golang.org/api/option"
 
+	path "path/filepath"
+
 	"cloud.google.com/go/storage"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/zap"
@@ -212,6 +214,7 @@ func compressFile(ctx context.Context, filepath string, format model.Format) (st
 	if errPass1 != nil {
 		return "", errPass1
 	}
+
 	return outputPath, nil
 }
 
@@ -247,7 +250,6 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 		if videoCodec == "libx265" {
 			encodeCmd += " -tag:v " + tagVideo
 		}
-
 		if pass == 1 {
 			encodeCmd += " /dev/null -y"
 		} else {
@@ -296,7 +298,16 @@ func uploadFile(ctx context.Context, fpath string, format model.Format) error {
 			return err
 		}
 		defer file.Close()
+	}
 
+	files, err := path.Glob(fmt.Sprintf("%v*", fpath))
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if err := os.Remove(f); err != nil {
+			panic(err)
+		}
 	}
 	return nil
 }
