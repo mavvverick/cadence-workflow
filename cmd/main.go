@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	server "github.com/YOVO-LABS/workflow/cmd/server"
 	worker "github.com/YOVO-LABS/workflow/cmd/workflow"
@@ -19,18 +20,19 @@ func main() {
 	flag.StringVar(&tasklist, "tasklist", "", "Name of the tasklist")
 	flag.Parse()
 
-	if service == "app" {
+	if service == "app" || os.Getenv("SERVICE") == "app" {
 		application := server.New(configFilePath)
 		// init necessary module before start
 		application.Init()
 		// start http server
 		application.Start(serverPort)
-
-	} else if service == "worker" {
+	} else if service == "worker" || os.Getenv("SERVICE") == "worker" {
+		if os.Getenv("SERVICE") == "worker" {
+			tasklist = os.Getenv("TASKLIST")
+		}
 		worker := worker.New(configFilePath)
 		worker.Init(tasklist)
 		worker.Start()
-
 		// The workers are supposed to be long running process that should not exit.
 		select {}
 	}
