@@ -354,7 +354,7 @@ func migrateToColdline(ctx context.Context, jobID string, format model.Format) e
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON1"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
 	if err != nil {
 		return err
 	}
