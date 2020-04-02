@@ -128,19 +128,10 @@ func (b *JobProcessorService) NotifyJobStateChange(w http.ResponseWriter, r *htt
 
 // GetJobInfo ...
 func (b *JobProcessorService) GetJobInfo(ctx context.Context, workflowOption *model.Workflow) (interface{}, error) {
-	fmt.Println(workflowOption.WfID, workflowOption.RunID)
-	queryWorkflowWithOptionsRequest := client.QueryWorkflowWithOptionsRequest{
-		WorkflowID: workflowOption.WfID,
-		RunID:      workflowOption.RunID,
-		QueryType:  workflowOption.WfID,
-	}
-
-	queryWorkflowWithOptionsResponse, err := b.CadenceAdapter.CadenceClient.QueryWorkflowWithOptions(ctx,
-		&queryWorkflowWithOptionsRequest)
+	describeWorkflowExecution, err := b.CadenceAdapter.CadenceClient.DescribeWorkflowExecution(ctx, workflowOption.WfID, workflowOption.RunID)
 	if err != nil {
 		return "nil", err
 	}
-	var queryResult interface{}
-	queryWorkflowWithOptionsResponse.QueryResult.Get(&queryResult)
-	return queryResult, nil
+	execTime := describeWorkflowExecution.WorkflowExecutionInfo.ExecutionTime
+	return execTime, nil
 }

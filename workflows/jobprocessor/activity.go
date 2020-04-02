@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -147,23 +146,23 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 	return fpath, nil
 }
 
-func compressFileActivity(ctx context.Context, jobID string, filepath string, format model.Format) ([]string, error) {
+func compressFileActivity(ctx context.Context, jobID string, filepath string, format model.Format) error {
 	// var compressFlag string
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 	logger.Info("compressFileActivity started.", zap.String("FileName", filepath))
 
 	// process the file
-	execTime, err := compressFile(ctx, filepath, format)
+	err := compressFile(ctx, filepath, format)
 
 	if err != nil {
 		logger.Error("compressFileActivity failed to compress file.", zap.Error(err))
 		// compressFlag := "FAILED"
-		return nil, err
+		return err
 	}
 
 	logger.Info("compressFileActivity succeed.")
 	// compressFlag = "SUCCESS"
-	return execTime, nil
+	return nil
 }
 
 func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.Format) error {
@@ -193,29 +192,27 @@ func downloadFile(ctx context.Context, url string) (string, error) {
 	return strings.Split(localFileName, ".")[0], nil
 }
 
-func compressFile(ctx context.Context, filepath string, format model.Format) ([]string, error) {
+func compressFile(ctx context.Context, filepath string, format model.Format) error {
 	// Two pass encoding
 	encodeCmdPass0, _ := createEncodeCommand(filepath, 1, format.Encode)
-	fmt.Println(encodeCmdPass0)
 	argsPass0 := strings.Fields(encodeCmdPass0)
 	cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
-	execTime0, errPass0 := executeEncodeCommand(ctx, cmdPass0)
+	errPass0 := executeEncodeCommand(ctx, cmdPass0)
 	if cmdPass0 != nil {
 		if errPass0 != nil {
-			return nil, errPass0
+			return errPass0
 		}
 	}
 
 	encodeCmdPass1, _ := createEncodeCommand(filepath, 2, format.Encode)
-	fmt.Println(encodeCmdPass1)
 	argsPass1 := strings.Fields(encodeCmdPass1)
 	cmdPass1 := exec.Command(argsPass1[0], argsPass1[1:]...)
-	execTime1, errPass1 := executeEncodeCommand(ctx, cmdPass1)
+	errPass1 := executeEncodeCommand(ctx, cmdPass1)
 	if errPass1 != nil {
-		return nil, errPass1
+		return errPass1
 	}
 
-	return []string{execTime0, execTime1}, nil
+	return nil
 }
 
 func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (encodeCmd string, outputPath string) {
@@ -230,7 +227,6 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 		preset, videoFormat := "medium", encode.VideoFormat
 
 		outputPath := filepath + "_" + encode.VideoCodec + "_" + encode.Size
-		fmt.Println(outputPath)
 
 		encodeCmd +=
 			" -pix_fmt " + pixelFormat +
@@ -260,25 +256,16 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 	return
 }
 
-func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) (string, error) {
-	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	var stdBuffer bytes.Buffer
-	// mw := io.MultiWriter(os.Stdout, &stdBuffer)
-	// var stderr bytes.Buffer
-	// cmd.Stderr = &stderr
-	// cmd.Stdout = mw
-	cmd.Stderr = &stdBuffer
+func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		logger.Info("Error running the command" + ": " + stdBuffer.String())
-		return "", err
+		logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
+		logger.Info("Error running the command" + ": " + stderr.String())
+		return err
 	}
-	space := regexp.MustCompile(`\s+`)
-	ffoutput := strings.Split(stdBuffer.String(), "\n")
-	timeStats := space.ReplaceAllString(ffoutput[len(ffoutput)-2], ",")
-	execTime := strings.Split(timeStats, ",")[1]
-	fmt.Println("execTime", execTime)
-	return execTime, nil
+	return nil
 }
 
 func uploadFile(ctx context.Context, fpath string, format model.Format) error {

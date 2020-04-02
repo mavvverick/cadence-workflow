@@ -62,15 +62,6 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// 	createJoblogger.Error("Created New Job", zap.Error(err))
 	// 	return "", err
 	// }
-	var queryResult interface{}
-	wfID := workflow.GetInfo(ctx).WorkflowExecution.ID
-	err = workflow.SetQueryHandler(ctx, wfID, func(input []byte) (interface{}, error) {
-		return queryResult, nil
-	})
-	if err != nil {
-		return "FAILED", err
-	}
-
 	cb := handler.NewCallbackInfo(&format)
 
 	processingActivityOptions := workflow.ActivityOptions{
@@ -107,7 +98,6 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// 	return "", nil
 	// }
 
-	downloadStartTime := workflow.Now(ctx)
 	var filePath string
 	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
 		jobID, format.Source).Get(processJobSessionContext, &filePath)
@@ -118,17 +108,13 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		return "", err
 	}
 
-	downloadEndTime := workflow.Now(ctx)
-
-	var execTime []string
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
-		jobID, filePath, format).Get(processJobSessionContext, &execTime)
+		jobID, filePath, format).Get(processJobSessionContext, nil)
 	if err != nil {
 		cb.PushMessage("COMPRESSION", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
 		return "", err
 	}
-	compressEndTime := workflow.Now(ctx)
 
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, nil)
@@ -136,16 +122,6 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
 		return "", err
-	}
-	uploadEndTime := workflow.Now(ctx)
-
-	queryResult = &ExecutionTime{
-		DownloadActivity: downloadEndTime.Sub(downloadStartTime).Seconds(),
-		EncodeActivity:   compressEndTime.Sub(downloadEndTime).Seconds(),
-		UploadActivity:   uploadEndTime.Sub(compressEndTime).Seconds(),
-		WFID:             wfID,
-		FFExec0:          execTime[0],
-		FFExec1:          execTime[1],
 	}
 
 	cb.PushMessage("COMPLETED", "task", jobID, "saved", format.Encode)
