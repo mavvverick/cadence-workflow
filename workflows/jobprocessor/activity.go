@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -262,21 +263,21 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) (string, error) {
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 	var stdBuffer bytes.Buffer
-	mw := io.MultiWriter(os.Stdout, &stdBuffer)
-
-	cmd.Stdout = mw
-	cmd.Stderr = mw
+	// mw := io.MultiWriter(os.Stdout, &stdBuffer)
+	// var stderr bytes.Buffer
+	// cmd.Stderr = &stderr
+	// cmd.Stdout = mw
+	cmd.Stderr = &stdBuffer
 	err := cmd.Run()
 	if err != nil {
-		logger.Info("Error running the command" + ": ")
-		// + stderr.String())
+		logger.Info("Error running the command" + ": " + stdBuffer.String())
 		return "", err
 	}
+	space := regexp.MustCompile(`\s+`)
 	ffoutput := strings.Split(stdBuffer.String(), "\n")
-	timeStats := strings.Replace(ffoutput[len(ffoutput)-2], "       ", ",", -1)
+	timeStats := space.ReplaceAllString(ffoutput[len(ffoutput)-2], ",")
 	execTime := strings.Split(timeStats, ",")[1]
-	execTime = strings.Replace(execTime, " ", ",", -1)
-	execTime = strings.Split(execTime, ",")[0]
+	fmt.Println("execTime", execTime)
 	return execTime, nil
 }
 
