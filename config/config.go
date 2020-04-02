@@ -1,11 +1,12 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	messaging "github.com/YOVO-LABS/workflow/common/messaging"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -27,15 +28,12 @@ type AppConfig struct {
 
 // LoadConfig setup the config for the code run
 func (h *AppConfig) LoadConfig(configPath string) {
-	viper.SetConfigName("application")
-	viper.AddConfigPath(configPath)
-	viper.AutomaticEnv()
-	// viper.SetConfigType("yml")
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Printf("Error reading config file, %s", err)
-	}
+	h.Cadence.Domain = os.Getenv("CADENCE_DOMAIN")
+	h.Cadence.HostPort = os.Getenv("CADENCE_HOST")
+	h.Cadence.Service = os.Getenv("CADENCE_SERVICE")
 
-	err := viper.Unmarshal(&h)
+	kafkaConfig := []byte(os.Getenv("KAFKA_CONFIG"))
+	err := json.Unmarshal(kafkaConfig, &h)
 	if err != nil {
 		fmt.Printf("Unable to decode into struct, %v", err)
 	}
@@ -45,6 +43,5 @@ func (h *AppConfig) LoadConfig(configPath string) {
 		panic(err)
 	}
 	h.Logger = logger
-
 	logger.Debug("Finished loading Configuration!")
 }

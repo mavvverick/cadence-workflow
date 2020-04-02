@@ -26,32 +26,32 @@ func init() {
 
 // Workflow workflow
 func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
-	creationActivityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Hour * 24,
-		StartToCloseTimeout:    time.Hour * 24,
-		HeartbeatTimeout:       time.Hour * 24,
-	}
+	// creationActivityOptions := workflow.ActivityOptions{
+	// 	ScheduleToStartTimeout: time.Hour * 24,
+	// 	StartToCloseTimeout:    time.Hour * 24,
+	// 	HeartbeatTimeout:       time.Hour * 24,
+	// }
 
-	createJobContext := workflow.WithActivityOptions(ctx, creationActivityOptions)
-	createJoblogger := workflow.GetLogger(createJobContext)
-	createJoblogger.Info("Starting workflow")
-	createJoblogger.Info(format.Source)
+	// createJobContext := workflow.WithActivityOptions(ctx, creationActivityOptions)
+	// createJoblogger := workflow.GetLogger(createJobContext)
+	// createJoblogger.Info("Starting workflow")
+	// createJoblogger.Info(format.Source)
 
-	sessionOptions := &workflow.SessionOptions{
-		CreationTimeout:  time.Hour * 24,
-		ExecutionTimeout: time.Hour * 24,
-	}
-	createJobSessionCtx, err := workflow.CreateSession(createJobContext, sessionOptions)
-	if err != nil {
-		return "", err
-	}
-	defer workflow.CompleteSession(createJobSessionCtx)
+	// sessionOptions := &workflow.SessionOptions{
+	// 	CreationTimeout:  time.Hour * 24,
+	// 	ExecutionTimeout: time.Hour * 24,
+	// }
+	// createJobSessionCtx, err := workflow.CreateSession(createJobContext, sessionOptions)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// defer workflow.CompleteSession(createJobSessionCtx)
 
-	err = workflow.ExecuteActivity(createJobSessionCtx, createJobActivity, jobID).Get(createJobSessionCtx, nil)
-	if err != nil {
-		createJoblogger.Error("Created New Job", zap.Error(err))
-		return "", err
-	}
+	// err = workflow.ExecuteActivity(createJobSessionCtx, createJobActivity, jobID).Get(createJobSessionCtx, nil)
+	// if err != nil {
+	// 	createJoblogger.Error("Created New Job", zap.Error(err))
+	// 	return "", err
+	// }
 
 	cb := handler.NewCallbackInfo(&format)
 

@@ -44,10 +44,10 @@ const (
 
 // This is registration process where you register all your activity handlers.
 func init() {
-	activity.RegisterWithOptions(
-		createJobActivity,
-		activity.RegisterOptions{Name: createJobActivityName},
-	)
+	// activity.RegisterWithOptions(
+	// 	createJobActivity,
+	// 	activity.RegisterOptions{Name: createJobActivityName},
+	// )
 
 	// activity.RegisterWithOptions(
 	// 	waitForDecisionActivity,
@@ -81,7 +81,6 @@ func createJobActivity(ctx context.Context, jobID string) error {
 	}
 
 	resp, err := http.Get(jobServerURL + "/workflow/job/start?is_api_call=true&id=" + jobID)
-
 	if err != nil {
 		return err
 	}
@@ -238,7 +237,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 				" -vsync " + "1" +
 				" -vcodec " + videoCodec +
 				" -r " + strconv.Itoa(framerate) +
-				" -threads " + "0" +
+				" -threads " + os.Getenv("FFMPEG_THREAD_COUNT") +
 				" -b:v: " + bitRate +
 				" -bufsize " + bufferSize +
 				" -maxrate " + maxRate +

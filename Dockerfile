@@ -20,8 +20,7 @@ WORKDIR $GOPATH/src/github.com/YOVO-LABS/workflow
 RUN export GOPRIVATE=github.com/YOVO-LABS/*
 
 # RUN ls
-RUN go get ./
-
+RUN go get ./...
 RUN go build cmd/main.go
 
 # Stage 2
@@ -30,17 +29,11 @@ FROM alpine:3.10
 RUN apk add --update \
     curl \
     ca-certificates \
-    ffmpeg \
-    python \
-    python-dev \
-    py-pip \
-    build-base \
-    && pip install awscli==$AWSCLI_VERSION --upgrade --user \
-    && apk --purge -v del py-pip \
-    && rm -rf /var/cache/apk/*
+    ffmpeg 
 
-COPY --from=builder /go/bin/main /
-
+COPY --from=builder /go/bin/cmd /
 EXPOSE 4000
 
-CMD ["./main"]
+CMD ["./cmd"]
+
+# docker run -d --name transcoder --env-file=.env -p 4000:4000 asia.gcr.io/chrome-weft-229408/transcoder:v1
