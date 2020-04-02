@@ -198,10 +198,8 @@ func compressFile(ctx context.Context, filepath string, format model.Format) err
 	argsPass0 := strings.Fields(encodeCmdPass0)
 	cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
 	errPass0 := executeEncodeCommand(ctx, cmdPass0)
-	if cmdPass0 != nil {
-		if errPass0 != nil {
-			return errPass0
-		}
+	if errPass0 != nil {
+		return errPass0
 	}
 
 	encodeCmdPass1, _ := createEncodeCommand(filepath, 2, format.Encode)
@@ -263,7 +261,7 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 	if err != nil {
 		logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 		logger.Info("Error running the command" + ": " + stderr.String())
-		return err
+		return errors.New(stderr.String())
 	}
 	return nil
 }
@@ -356,7 +354,7 @@ func migrateToColdline(ctx context.Context, jobID string, format model.Format) e
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON1"))))
 	if err != nil {
 		return err
 	}
