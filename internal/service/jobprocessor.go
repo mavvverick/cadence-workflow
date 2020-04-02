@@ -132,6 +132,6 @@ func (b *JobProcessorService) GetJobInfo(ctx context.Context, workflowOption *mo
 	if err != nil {
 		return "nil", err
 	}
-	execTime := describeWorkflowExecution.WorkflowExecutionInfo.ExecutionTime
+	execTime := describeWorkflowExecution.WorkflowExecutionInfo.GetCloseTime() - describeWorkflowExecution.WorkflowExecutionInfo.GetStartTime()
 	return execTime, nil
 }
