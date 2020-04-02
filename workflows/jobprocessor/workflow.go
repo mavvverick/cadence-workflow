@@ -6,6 +6,7 @@ import (
 	"github.com/YOVO-LABS/workflow/api/model"
 	"github.com/YOVO-LABS/workflow/internal/handler"
 	"github.com/pborman/uuid"
+	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
@@ -105,7 +106,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	if err != nil {
 		cb.PushMessage("DOWNLOAD", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed downloadFileActivity", zap.Error(err))
-		return "", err
+		return "", cadence.NewCustomError(err.Error(), "Failed DownloadActivity")
 	}
 
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
@@ -113,7 +114,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	if err != nil {
 		cb.PushMessage("COMPRESSION", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
-		return "", err
+		return "", cadence.NewCustomError(err.Error(), "Failed compressFileActivity")
 	}
 
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
@@ -121,7 +122,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	if err != nil {
 		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
-		return "", err
+		return "", cadence.NewCustomError(err.Error(), "Failed uploadFileActivity")
 	}
 
 	cb.PushMessage("COMPLETED", "task", jobID, "saved", format.Encode)
