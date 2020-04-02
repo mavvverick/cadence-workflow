@@ -24,6 +24,16 @@ func init() {
 	workflow.Register(Workflow)
 }
 
+//ExecutionTime ..
+type ExecutionTime struct {
+	DownloadActivity float64
+	EncodeActivity   float64
+	UploadActivity   float64
+	WFID             string
+	FFExec0          string
+	FFExec1          string
+}
+
 // Workflow workflow
 func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
 	// creationActivityOptions := workflow.ActivityOptions{
@@ -52,12 +62,22 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// 	createJoblogger.Error("Created New Job", zap.Error(err))
 	// 	return "", err
 	// }
+	var queryResult interface{}
+	wfID := workflow.GetInfo(ctx).WorkflowExecution.ID
+	err = workflow.SetQueryHandler(ctx, wfID, func(input []byte) (interface{}, error) {
+		return queryResult, nil
+	})
+	if err != nil {
+		return "FAILED", err
+	}
 
 	cb := handler.NewCallbackInfo(&format)
 
 	processingActivityOptions := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Hour * 24,
 		StartToCloseTimeout:    time.Hour * 24,
+		ScheduleToCloseTimeout: time.Hour * 24,
+		HeartbeatTimeout:       time.Hour * 24,
 	}
 	processJobContext := workflow.WithActivityOptions(ctx, processingActivityOptions)
 	logger := workflow.GetLogger(processJobContext)
@@ -65,6 +85,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	processJobSessionOptions := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
 		ExecutionTimeout: time.Hour * 24,
+		HeartbeatTimeout: time.Hour * 24,
 	}
 
 	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)
@@ -86,6 +107,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// 	return "", nil
 	// }
 
+	downloadStartTime := workflow.Now(ctx)
 	var filePath string
 	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
 		jobID, format.Source).Get(processJobSessionContext, &filePath)
@@ -96,14 +118,17 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		return "", err
 	}
 
-	var encodeFlag string
+	downloadEndTime := workflow.Now(ctx)
+
+	var execTime []string
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
-		jobID, filePath, format).Get(processJobSessionContext, &encodeFlag)
-	if err != nil || encodeFlag == "FAILED" {
+		jobID, filePath, format).Get(processJobSessionContext, &execTime)
+	if err != nil {
 		cb.PushMessage("COMPRESSION", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
 		return "", err
 	}
+	compressEndTime := workflow.Now(ctx)
 
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
 		jobID, filePath, format).Get(processJobSessionContext, nil)
@@ -111,6 +136,16 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
 		return "", err
+	}
+	uploadEndTime := workflow.Now(ctx)
+
+	queryResult = &ExecutionTime{
+		DownloadActivity: downloadEndTime.Sub(downloadStartTime).Seconds(),
+		EncodeActivity:   compressEndTime.Sub(downloadEndTime).Seconds(),
+		UploadActivity:   uploadEndTime.Sub(compressEndTime).Seconds(),
+		WFID:             wfID,
+		FFExec0:          execTime[0],
+		FFExec1:          execTime[1],
 	}
 
 	cb.PushMessage("COMPLETED", "task", jobID, "saved", format.Encode)

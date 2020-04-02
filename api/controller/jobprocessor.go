@@ -39,3 +39,23 @@ func (l *JobProcessorController) ActionHandler(w http.ResponseWriter, r *http.Re
 	// l.WriteJSON(r, w, http.StatusOK, nil)
 
 }
+
+// GetJob ...
+func (l *JobProcessorController) GetJob(w http.ResponseWriter, r *http.Request) {
+	var req model.Workflow
+
+	err := l.decodeAndValidate(r, &req)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	exec, err := l.JobProcessorService.GetJobInfo(r.Context(), &req)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	l.WriteJSON(r, w, http.StatusOK, exec)
+
+}

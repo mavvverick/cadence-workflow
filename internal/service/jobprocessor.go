@@ -21,6 +21,7 @@ import (
 type JobProcessorInterface interface {
 	CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error)
 	NotifyJobStateChange(w http.ResponseWriter, r *http.Request) error
+	GetJobInfo(ctx context.Context, workflowOption *model.Workflow) (interface{}, error)
 }
 
 //JobProcessorService ...
@@ -123,4 +124,23 @@ func (b *JobProcessorService) NotifyJobStateChange(w http.ResponseWriter, r *htt
 	fmt.Printf("Set state for %s from %s to %s.\n", id, oldState, allExpense[id])
 	return nil
 	// report state change
+}
+
+// GetJobInfo ...
+func (b *JobProcessorService) GetJobInfo(ctx context.Context, workflowOption *model.Workflow) (interface{}, error) {
+	fmt.Println(workflowOption.WfID, workflowOption.RunID)
+	queryWorkflowWithOptionsRequest := client.QueryWorkflowWithOptionsRequest{
+		WorkflowID: workflowOption.WfID,
+		RunID:      workflowOption.RunID,
+		QueryType:  workflowOption.WfID,
+	}
+
+	queryWorkflowWithOptionsResponse, err := b.CadenceAdapter.CadenceClient.QueryWorkflowWithOptions(ctx,
+		&queryWorkflowWithOptionsRequest)
+	if err != nil {
+		return "nil", err
+	}
+	var queryResult interface{}
+	queryWorkflowWithOptionsResponse.QueryResult.Get(&queryResult)
+	return queryResult, nil
 }
