@@ -38,9 +38,9 @@ type ExecutionTime struct {
 // Workflow workflow
 func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
 	// creationActivityOptions := workflow.ActivityOptions{
-	// 	ScheduleToStartTimeout: time.Hour * 24,
-	// 	StartToCloseTimeout:    time.Hour * 24,
-	// 	HeartbeatTimeout:       time.Hour * 24,
+	// 	ScheduleToStartTimeout: time.Minute * 30,
+	// 	StartToCloseTimeout:    time.Minute * 30,
+	// 	HeartbeatTimeout:       time.Minute * 30,
 	// }
 
 	// createJobContext := workflow.WithActivityOptions(ctx, creationActivityOptions)
@@ -49,8 +49,8 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// createJoblogger.Info(format.Source)
 
 	// sessionOptions := &workflow.SessionOptions{
-	// 	CreationTimeout:  time.Hour * 24,
-	// 	ExecutionTimeout: time.Hour * 24,
+	// 	CreationTimeout:  time.Minute * 30,
+	// 	ExecutionTimeout: time.Minute * 30,
 	// }
 	// createJobSessionCtx, err := workflow.CreateSession(createJobContext, sessionOptions)
 	// if err != nil {
@@ -66,18 +66,25 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	cb := handler.NewCallbackInfo(&format)
 
 	processingActivityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Hour * 24,
-		StartToCloseTimeout:    time.Hour * 24,
-		ScheduleToCloseTimeout: time.Hour * 24,
-		HeartbeatTimeout:       time.Hour * 24,
+		ScheduleToStartTimeout: time.Minute * 30,
+		StartToCloseTimeout:    time.Minute * 5,
+		ScheduleToCloseTimeout: time.Minute * 30,
+		HeartbeatTimeout:       time.Minute * 30,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:          time.Second,
+			BackoffCoefficient:       2.0,
+			MaximumInterval:          time.Minute * 4,
+			ExpirationInterval:       time.Minute * 10,
+			NonRetriableErrorReasons: []string{"bad-error"},
+		},
 	}
 	processJobContext := workflow.WithActivityOptions(ctx, processingActivityOptions)
 	logger := workflow.GetLogger(processJobContext)
 
 	processJobSessionOptions := &workflow.SessionOptions{
-		CreationTimeout:  time.Hour * 24,
-		ExecutionTimeout: time.Hour * 24,
-		HeartbeatTimeout: time.Hour * 24,
+		CreationTimeout:  time.Minute * 30,
+		ExecutionTimeout: time.Minute * 30,
+		HeartbeatTimeout: time.Minute * 30,
 	}
 
 	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)

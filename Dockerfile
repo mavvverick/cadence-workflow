@@ -1,5 +1,5 @@
 # Stage 1
-FROM golang:1.13.0-alpine3.10 as builder
+FROM golang:1.13.9-alpine3.11 as builder
 
 ARG BUILD_TOKEN
 
@@ -24,12 +24,12 @@ RUN go get ./...
 RUN go build cmd/main.go
 
 # Stage 2
-FROM alpine:3.10
+FROM alpine:3.11
 
 RUN apk add --update \
     curl \
     ca-certificates \
-    ffmpeg 
+    ffmpeg=4.2.1-r3
 
 COPY --from=builder /go/bin/cmd /
 EXPOSE 4000

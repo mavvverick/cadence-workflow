@@ -200,15 +200,16 @@ func downloadFile(ctx context.Context, url, jobID string) (string, error) {
 
 func compressFile(ctx context.Context, filepath, jobID string, format model.Format) error {
 	fmt.Println(jobID, time.Now(), "compressFile Activity -> Start")
+
 	// Two pass encoding
-	encodeCmdPass0, _ := createEncodeCommand(filepath, 1, format.Encode)
-	argsPass0 := strings.Fields(encodeCmdPass0)
-	cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
-	errPass0 := executeEncodeCommand(ctx, cmdPass0)
-	if errPass0 != nil {
-		return errPass0
-	}
-	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
+	// encodeCmdPass0, _ := createEncodeCommand(filepath, 1, format.Encode)
+	// argsPass0 := strings.Fields(encodeCmdPass0)
+	// cmdPass0 := exec.Command(argsPass0[0], argsPass0[1:]...)
+	// errPass0 := executeEncodeCommand(ctx, cmdPass0)
+	// if errPass0 != nil {
+	// 	return errPass0
+	// }
+	// fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
 
 	encodeCmdPass1, _ := createEncodeCommand(filepath, 2, format.Encode)
 	argsPass1 := strings.Fields(encodeCmdPass1)
@@ -218,7 +219,7 @@ func compressFile(ctx context.Context, filepath, jobID string, format model.Form
 		return errPass1
 	}
 
-	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 2")
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
 
 	return nil
 }
@@ -247,13 +248,14 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 				" -bufsize " + bufferSize +
 				" -maxrate " + maxRate +
 				" -preset " + preset +
-				" -pass " + strconv.Itoa(pass) +
-				" -f " + videoFormat +
-				" -passlogfile " + outputPath
+				//" -pass " + strconv.Itoa(pass) +
+				//" -passlogfile " + outputPath +
+				" -f " + videoFormat
 
 		if videoCodec == "libx265" {
 			encodeCmd += " -tag:v " + tagVideo
 		}
+
 		if pass == 1 {
 			encodeCmd += " /dev/null -y"
 		} else {

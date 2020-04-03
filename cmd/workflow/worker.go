@@ -43,9 +43,10 @@ func (w *Worker) Init(tasklist string) {
 func (w *Worker) Start(verbose string) {
 	// Configure worker options.
 	workerOptions := worker.Options{
-		MetricsScope:          w.cadenceAdapter.Scope,
-		EnableLoggingInReplay: true,
-		EnableSessionWorker:   true,
+		MetricsScope:                      w.cadenceAdapter.Scope,
+		EnableLoggingInReplay:             true,
+		EnableSessionWorker:               true,
+		MaxConcurrentSessionExecutionSize: 1,
 	}
 	if verbose == "0" {
 		workerOptions.Logger = zap.NewNop()
