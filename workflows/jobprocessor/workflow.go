@@ -99,6 +99,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	// 	return "", nil
 	// }
 
+	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	var filePath string
 	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
 		jobID, format.Source).Get(processJobSessionContext, &filePath)

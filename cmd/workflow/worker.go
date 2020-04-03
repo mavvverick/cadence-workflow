@@ -12,7 +12,7 @@ import (
 type WorkerInterface interface {
 	Init(taskList string)
 
-	Start()
+	Start(verbose string)
 }
 
 //Worker ...
@@ -40,13 +40,17 @@ func (w *Worker) Init(tasklist string) {
 }
 
 //Start ...
-func (w *Worker) Start() {
+func (w *Worker) Start(verbose string) {
 	// Configure worker options.
 	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
-		Logger:                w.cadenceAdapter.Logger,
 		EnableLoggingInReplay: true,
 		EnableSessionWorker:   true,
+	}
+	if verbose == "0" {
+		workerOptions.Logger = zap.NewNop()
+	} else {
+		workerOptions.Logger = w.cadenceAdapter.Logger
 	}
 
 	cadenceWorker := worker.New(w.cadenceAdapter.ServiceClient, w.config.Cadence.Domain, w.taskList, workerOptions)

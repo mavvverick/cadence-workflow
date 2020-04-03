@@ -14,10 +14,12 @@ func main() {
 	var configFilePath string
 	var serverPort string
 	var tasklist string
+	var logger string
 	flag.StringVar(&service, "service", "", "Name of the service to start (app server or workflow workerworker)")
 	flag.StringVar(&configFilePath, "config", "./config", "absolute path to the configuration file")
 	flag.StringVar(&serverPort, "port", "4000", "port on which server runs")
 	flag.StringVar(&tasklist, "tasklist", "", "Name of the tasklist")
+	flag.StringVar(&logger, "v", "0", "Logger enable/disable")
 	flag.Parse()
 
 	if service == "app" || os.Getenv("SERVICE") == "app" {
@@ -30,9 +32,12 @@ func main() {
 		if os.Getenv("SERVICE") == "worker" {
 			tasklist = os.Getenv("TASKLIST")
 		}
+		if os.Getenv("VERBOSE") != "" {
+			logger = os.Getenv("VERBOSE")
+		}
 		worker := worker.New(configFilePath)
 		worker.Init(tasklist)
-		worker.Start()
+		worker.Start(logger)
 		// The workers are supposed to be long running process that should not exit.
 		select {}
 	}

@@ -139,8 +139,9 @@ func downloadFileActivity(ctx context.Context, jobID, url string) (string, error
 	logger := activity.GetLogger(ctx)
 	logger.Info("Downloading file...", zap.String("File URL", url))
 
-	fpath, err := downloadFile(ctx, url)
+	fpath, err := downloadFile(ctx, url, jobID)
 	if err != nil {
+		fmt.Println(jobID, time.Now(), "downloadFile Activity -> Failed")
 		return "", err
 	}
 	return fpath, nil
@@ -152,13 +153,16 @@ func compressFileActivity(ctx context.Context, jobID string, filepath string, fo
 	logger.Info("compressFileActivity started.", zap.String("FileName", filepath))
 
 	// process the file
-	err := compressFile(ctx, filepath, format)
+	err := compressFile(ctx, filepath, jobID, format)
 
 	if err != nil {
 		logger.Error("compressFileActivity failed to compress file.", zap.Error(err))
 		// compressFlag := "FAILED"
+		fmt.Println(jobID, time.Now(), "compressFile Activity -> Failed")
 		return err
 	}
+
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Finished")
 
 	logger.Info("compressFileActivity succeed.")
 	// compressFlag = "SUCCESS"
@@ -168,18 +172,20 @@ func compressFileActivity(ctx context.Context, jobID string, filepath string, fo
 func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.Format) error {
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
 	logger.Info("uploadFileActivity begin", zap.String("FileName", localProcessedDirectory))
-
+	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Start")
 	// upload the file
-	err := uploadFile(ctx, fpath, format)
+	err := uploadFile(ctx, fpath, jobID, format)
 	if err != nil {
+		fmt.Println(jobID, time.Now(), "uploadFile Activity -> Failed")
 		return err
 	}
+	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Finished")
 	logger.Info("uploadFileActivity succeeded", zap.String("FileName", localProcessedDirectory))
 	return nil
 }
 
-func downloadFile(ctx context.Context, url string) (string, error) {
-
+func downloadFile(ctx context.Context, url, jobID string) (string, error) {
+	fmt.Println(jobID, time.Now(), "Download Activity -> Start")
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
 	object := strings.Split(url, ".com/")[1]
 	localFileName := localDirectory + strings.Split(object, "/")[0] + "_" + strings.Split(object, "/")[2]
@@ -188,11 +194,12 @@ func downloadFile(ctx context.Context, url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println(jobID, time.Now(), "Download Activity -> Finished")
 	return strings.Split(localFileName, ".")[0], nil
 }
 
-func compressFile(ctx context.Context, filepath string, format model.Format) error {
+func compressFile(ctx context.Context, filepath, jobID string, format model.Format) error {
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Start")
 	// Two pass encoding
 	encodeCmdPass0, _ := createEncodeCommand(filepath, 1, format.Encode)
 	argsPass0 := strings.Fields(encodeCmdPass0)
@@ -201,6 +208,7 @@ func compressFile(ctx context.Context, filepath string, format model.Format) err
 	if errPass0 != nil {
 		return errPass0
 	}
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
 
 	encodeCmdPass1, _ := createEncodeCommand(filepath, 2, format.Encode)
 	argsPass1 := strings.Fields(encodeCmdPass1)
@@ -209,6 +217,8 @@ func compressFile(ctx context.Context, filepath string, format model.Format) err
 	if errPass1 != nil {
 		return errPass1
 	}
+
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 2")
 
 	return nil
 }
@@ -266,7 +276,7 @@ func executeEncodeCommand(ctx context.Context, cmd *exec.Cmd) error {
 	return nil
 }
 
-func uploadFile(ctx context.Context, fpath string, format model.Format) error {
+func uploadFile(ctx context.Context, fpath, jobID string, format model.Format) error {
 	gsContext := context.Background()
 	storageClient, err := storage.NewClient(gsContext,
 		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
@@ -294,6 +304,8 @@ func uploadFile(ctx context.Context, fpath string, format model.Format) error {
 		defer file.Close()
 	}
 
+	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Uploading Finished")
+
 	files, err := path.Glob(fmt.Sprintf("%v*", fpath))
 	if err != nil {
 		return err
@@ -303,6 +315,7 @@ func uploadFile(ctx context.Context, fpath string, format model.Format) error {
 			panic(err)
 		}
 	}
+	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Temp Files cleaned")
 	return nil
 }
 
