@@ -1,6 +1,11 @@
 package worker
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/YOVO-LABS/workflow/config"
 	ca "github.com/YOVO-LABS/workflow/internal/adapter"
 
@@ -57,10 +62,12 @@ func (w *Worker) Start(verbose, workerType string) {
 		workerOptions.DisableWorkflowWorker = true
 		workerOptions.DisableActivityWorker = false
 		workerOptions.MaxConcurrentSessionExecutionSize = 1
+		workerOptions.WorkerStopTimeout = time.Second * 10
 	} else if workerType == "workflow" {
 		workerOptions.EnableSessionWorker = false
 		workerOptions.DisableWorkflowWorker = false
 		workerOptions.DisableActivityWorker = true
+		workerOptions.WorkerStopTimeout = time.Second * 10
 	}
 
 	cadenceWorker := worker.New(w.cadenceAdapter.ServiceClient, w.config.Cadence.Domain, w.taskList, workerOptions)
@@ -69,5 +76,15 @@ func (w *Worker) Start(verbose, workerType string) {
 		w.cadenceAdapter.Logger.Error("Failed to start workers.", zap.Error(err))
 		panic("Failed to start workers")
 	}
-	select {}
+
+	done := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		time.Sleep(time.Second * 5)
+		cadenceWorker.Stop()
+		close(done)
+	}()
+	<-done
 }
