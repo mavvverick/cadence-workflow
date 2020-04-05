@@ -1,9 +1,6 @@
 package worker
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/YOVO-LABS/workflow/config"
 	ca "github.com/YOVO-LABS/workflow/internal/adapter"
 
@@ -46,28 +43,24 @@ func (w *Worker) Init(tasklist string) {
 func (w *Worker) Start(verbose, workerType string) {
 	// Configure worker options.
 	workerOptions := worker.Options{
-		MetricsScope:                      w.cadenceAdapter.Scope,
-		EnableLoggingInReplay:             true,
-		MaxConcurrentSessionExecutionSize: 1,
+		MetricsScope:          w.cadenceAdapter.Scope,
+		EnableLoggingInReplay: true,
 	}
-	if workerType == "workflow" {
-		fmt.Println("Workflow worker")
-		workerOptions.DisableWorkflowWorker = false
-		workerOptions.DisableActivityWorker = true
-		workerOptions.EnableSessionWorker = false
-		workerOptions.WorkerStopTimeout = time.Second * 10
-	} else if workerType == "activity" {
-		fmt.Println("Activity worker")
-		workerOptions.DisableWorkflowWorker = true
-		workerOptions.DisableActivityWorker = false
-		workerOptions.EnableSessionWorker = true
-		workerOptions.WorkerStopTimeout = time.Second * 10
-	}
-
 	if verbose == "0" {
 		workerOptions.Logger = zap.NewNop()
 	} else {
 		workerOptions.Logger = w.cadenceAdapter.Logger
+	}
+
+	if workerType == "activity" {
+		workerOptions.EnableSessionWorker = true
+		workerOptions.DisableWorkflowWorker = true
+		workerOptions.DisableActivityWorker = false
+		workerOptions.MaxConcurrentSessionExecutionSize = 1
+	} else if workerType == "workflow" {
+		workerOptions.EnableSessionWorker = false
+		workerOptions.DisableWorkflowWorker = false
+		workerOptions.DisableActivityWorker = true
 	}
 
 	cadenceWorker := worker.New(w.cadenceAdapter.ServiceClient, w.config.Cadence.Domain, w.taskList, workerOptions)
