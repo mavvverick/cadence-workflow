@@ -1,6 +1,9 @@
-package workflow
+package worker
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/YOVO-LABS/workflow/config"
 	ca "github.com/YOVO-LABS/workflow/internal/adapter"
 
@@ -12,7 +15,7 @@ import (
 type WorkerInterface interface {
 	Init(taskList string)
 
-	Start(verbose string)
+	Start(verbose, workerType string)
 }
 
 //Worker ...
@@ -40,14 +43,27 @@ func (w *Worker) Init(tasklist string) {
 }
 
 //Start ...
-func (w *Worker) Start(verbose string) {
+func (w *Worker) Start(verbose, workerType string) {
 	// Configure worker options.
 	workerOptions := worker.Options{
 		MetricsScope:                      w.cadenceAdapter.Scope,
 		EnableLoggingInReplay:             true,
-		EnableSessionWorker:               true,
 		MaxConcurrentSessionExecutionSize: 1,
 	}
+	if workerType == "workflow" {
+		fmt.Println("Workflow worker")
+		workerOptions.DisableWorkflowWorker = false
+		workerOptions.DisableActivityWorker = true
+		workerOptions.EnableSessionWorker = false
+		workerOptions.WorkerStopTimeout = time.Second * 10
+	} else if workerType == "activity" {
+		fmt.Println("Activity worker")
+		workerOptions.DisableWorkflowWorker = true
+		workerOptions.DisableActivityWorker = false
+		workerOptions.EnableSessionWorker = true
+		workerOptions.WorkerStopTimeout = time.Second * 10
+	}
+
 	if verbose == "0" {
 		workerOptions.Logger = zap.NewNop()
 	} else {
@@ -60,4 +76,5 @@ func (w *Worker) Start(verbose string) {
 		w.cadenceAdapter.Logger.Error("Failed to start workers.", zap.Error(err))
 		panic("Failed to start workers")
 	}
+	select {}
 }

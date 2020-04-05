@@ -37,32 +37,7 @@ type ExecutionTime struct {
 
 // Workflow workflow
 func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
-	// creationActivityOptions := workflow.ActivityOptions{
-	// 	ScheduleToStartTimeout: time.Minute * 30,
-	// 	StartToCloseTimeout:    time.Minute * 30,
-	// 	HeartbeatTimeout:       time.Minute * 30,
-	// }
 
-	// createJobContext := workflow.WithActivityOptions(ctx, creationActivityOptions)
-	// createJoblogger := workflow.GetLogger(createJobContext)
-	// createJoblogger.Info("Starting workflow")
-	// createJoblogger.Info(format.Source)
-
-	// sessionOptions := &workflow.SessionOptions{
-	// 	CreationTimeout:  time.Minute * 30,
-	// 	ExecutionTimeout: time.Minute * 30,
-	// }
-	// createJobSessionCtx, err := workflow.CreateSession(createJobContext, sessionOptions)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// defer workflow.CompleteSession(createJobSessionCtx)
-
-	// err = workflow.ExecuteActivity(createJobSessionCtx, createJobActivity, jobID).Get(createJobSessionCtx, nil)
-	// if err != nil {
-	// 	createJoblogger.Error("Created New Job", zap.Error(err))
-	// 	return "", err
-	// }
 	cb := handler.NewCallbackInfo(&format)
 
 	processingActivityOptions := workflow.ActivityOptions{
@@ -92,19 +67,6 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		logger.Error("Failed to create session context", zap.Error(err))
 	}
 	defer workflow.CompleteSession(processJobSessionContext)
-
-	// var status string
-	// err = workflow.ExecuteActivity(processJobSessionContext, waitForDecisionActivity,
-	// 	jobID).Get(processJobSessionContext, &status)
-	// if err != nil {
-	// 	cb.PushMessage(err.Error(), "task", jobID, "error", format.Encode)
-	// 	return "", err
-	// }
-
-	// if status != "APPROVED" {
-	// 	logger.Info("Workflow completed.", zap.String("JobStatus", status))
-	// 	return "", nil
-	// }
 
 	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	var filePath string
