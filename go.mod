@@ -13,9 +13,9 @@ require (
 	github.com/pborman/uuid v1.2.0
 	github.com/segmentio/kafka-go v0.3.5
 	github.com/shopspring/decimal v0.0.0-20200227202807-02e2044944cc
-	github.com/spf13/viper v1.6.2
+	github.com/spf13/viper v1.6.2 // indirect
 	github.com/uber-go/tally v3.3.15+incompatible
-	go.uber.org/cadence v0.11.2
+	go.uber.org/cadence v0.11.0
 	go.uber.org/yarpc v1.44.0
 	go.uber.org/zap v1.14.1
 	google.golang.org/api v0.18.0

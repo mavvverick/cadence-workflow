@@ -41,15 +41,15 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	cb := handler.NewCallbackInfo(&format)
 
 	processingActivityOptions := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Minute * 30,
+		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute * 5,
-		ScheduleToCloseTimeout: time.Minute * 30,
-		HeartbeatTimeout:       time.Minute * 30,
+		ScheduleToCloseTimeout: time.Minute * 5,
+		HeartbeatTimeout:       time.Minute * 2,
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute * 4,
-			ExpirationInterval:       time.Minute * 10,
+			MaximumInterval:          time.Minute * 2,
+			ExpirationInterval:       time.Hour * 10,
 			NonRetriableErrorReasons: []string{"bad-error"},
 		},
 	}
@@ -57,14 +57,15 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	logger := workflow.GetLogger(processJobContext)
 
 	processJobSessionOptions := &workflow.SessionOptions{
-		CreationTimeout:  time.Minute * 30,
-		ExecutionTimeout: time.Minute * 30,
-		HeartbeatTimeout: time.Minute * 30,
+		CreationTimeout:  time.Hour * 24,
+		ExecutionTimeout: time.Minute * 5,
+		HeartbeatTimeout: time.Second * 20,
 	}
 
 	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)
 	if err != nil {
 		logger.Error("Failed to create session context", zap.Error(err))
+		return "", cadence.NewCustomError(err.Error(), "Session Creation Failed")
 	}
 	defer workflow.CompleteSession(processJobSessionContext)
 

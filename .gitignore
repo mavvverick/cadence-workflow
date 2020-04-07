@@ -2,3 +2,5 @@
 *.log
 *.log.mbtree
 kachra/
+.vscode/
+.idea/

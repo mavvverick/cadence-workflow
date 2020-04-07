@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -81,7 +82,13 @@ func (w *Worker) Start(verbose, workerType string) {
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-		<-sigint
+		killSignal := <-sigint
+		switch killSignal {
+		case os.Interrupt:
+			log.Print("Got SIGINT...")
+		case syscall.SIGTERM:
+			log.Print("Got SIGTERM...")
+		}
 		time.Sleep(time.Second * 5)
 		cadenceWorker.Stop()
 		close(done)

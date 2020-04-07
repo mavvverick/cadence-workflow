@@ -22,6 +22,10 @@ func main() {
 	flag.StringVar(&logger, "v", "0", "Logger enable/disable")
 	flag.Parse()
 
+	if os.Getenv("SERVICE") != "" {
+		service = os.Getenv("SERVICE")
+	}
+
 	if os.Getenv("TASKLIST") != "" {
 		tasklist = os.Getenv("TASKLIST")
 	}
@@ -32,10 +36,8 @@ func main() {
 
 	if service == "app" || os.Getenv("SERVICE") == "app" {
 		application := server.New(configFilePath)
-
 		// init necessary module before start
 		application.Init()
-
 		// start http server
 		application.Start(serverPort)
 	} else if service == "workflow" || os.Getenv("SERVICE") == "workflow" {
