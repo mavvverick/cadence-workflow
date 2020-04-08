@@ -40,6 +40,8 @@ const (
 	blackHole                     = "blackHole/"
 	localDirectory                = "/tmp/"
 	localProcessedDirectory       = "/tmp/"
+	waterMarkFileName             = "watermark.gif"
+	watermarkFolder               = "pilot"
 )
 
 // This is registration process where you register all your activity handlers.
@@ -194,6 +196,15 @@ func downloadFile(ctx context.Context, url, jobID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	//check cache or else download watermark gif
+	if _, err := os.Stat(localDirectory + waterMarkFileName); err != nil {
+		err = downloadObjectToLocal(bucket, watermarkFolder+"/"+waterMarkFileName, localDirectory + waterMarkFileName)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	fmt.Println(jobID, time.Now(), "Download Activity -> Finished")
 	return strings.Split(localFileName, ".")[0], nil
 }
@@ -266,7 +277,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 			//integrate watermark
 			encodeCmd264 +=
 					" -ignore_loop " + "0" +
-					" -i " + "/tmp/watermark.gif" +
+					" -i " + localDirectory + waterMarkFileName +
 					" -pix_fmt " + pixelFormat +
 					" -movflags " + "faststart" +
 					" -vsync " + "1" +
@@ -316,7 +327,6 @@ func uploadFile(ctx context.Context, fpath, jobID string, format model.Format) e
 		bucket := pathArr[3]
 		object := strings.Split(encode.Destination, pathArr[3]+"/")[1]
 		filepath := fpath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
-		fmt.Println(filepath, bucket, object)
 		file, err := os.Open(filepath)
 		writeContext := storageClient.Bucket(bucket).Object(object).NewWriter(gsContext)
 		writeContext.ACL = []storage.ACLRule{{Role: storage.RoleReader, Entity: storage.AllUsers}}
@@ -391,7 +401,6 @@ func migrateToColdline(ctx context.Context, jobID string, format model.Format) e
 }
 
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
-	fmt.Println("Downloading")
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
 		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
