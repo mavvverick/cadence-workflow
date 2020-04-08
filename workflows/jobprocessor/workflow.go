@@ -44,11 +44,11 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute * 5,
 		ScheduleToCloseTimeout: time.Minute * 5,
-		HeartbeatTimeout:       time.Minute * 2,
+		HeartbeatTimeout:       time.Minute * 3,
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute * 2,
+			MaximumInterval:          time.Minute * 10,
 			ExpirationInterval:       time.Hour * 10,
 			NonRetriableErrorReasons: []string{"bad-error"},
 		},
@@ -59,7 +59,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	processJobSessionOptions := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
 		ExecutionTimeout: time.Minute * 5,
-		HeartbeatTimeout: time.Second * 20,
+		HeartbeatTimeout: time.Minute * 3,
 	}
 
 	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)

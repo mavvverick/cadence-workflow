@@ -27,7 +27,7 @@ func Workflow(ctx workflow.Context, jobID string) (result string, err error) {
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute * 10,
 		StartToCloseTimeout:    time.Minute * 10,
-		HeartbeatTimeout:       time.Second * 20,
+		HeartbeatTimeout:       time.Minute * 3,
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
