@@ -211,21 +211,29 @@ func compressFile(ctx context.Context, filepath, jobID string, format model.Form
 	// }
 	// fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
 
-	encodeCmdPass1, _ := createEncodeCommand(filepath, 2, format.Encode)
-	argsPass1 := strings.Fields(encodeCmdPass1)
-	cmdPass1 := exec.Command(argsPass1[0], argsPass1[1:]...)
-	errPass1 := executeEncodeCommand(ctx, cmdPass1)
-	if errPass1 != nil {
-		return errPass1
+	encodeCmd264, encodeCmd265 := createEncodeCommand(filepath, 2, format.Encode)
+	args264 := strings.Fields(encodeCmd264)
+	cmd264 := exec.Command(args264[0], args264[1:]...)
+	err := executeEncodeCommand(ctx, cmd264)
+	if err != nil {
+		return err
 	}
 
-	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
+	args265 := strings.Fields(encodeCmd265)
+	cmd265 := exec.Command(args265[0], args265[1:]...)
+	err = executeEncodeCommand(ctx, cmd265)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Command executed")
 
 	return nil
 }
 
-func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (encodeCmd string, outputPath string) {
-	encodeCmd = "time ffmpeg" + " -i " + filepath + ".mp4"
+func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (encodeCmd264, encodeCmd265 string) {
+	encodeCmd264 = "ffmpeg" + " -i " + filepath + ".mp4"
+	encodeCmd265 = "ffmpeg" + " -i " + filepath + ".mp4"
 
 	for _, encode := range encodes {
 		pixelFormat := "yuv420p"
@@ -235,9 +243,10 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 		bitRate, bufferSize, maxRate := rate, rate, rate
 		preset, videoFormat := "medium", encode.VideoFormat
 
-		outputPath := filepath + "_" + encode.VideoCodec + "_" + encode.Size
+		outputPath := filepath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
 
-		encodeCmd +=
+		if videoCodec == "libx265" {
+			encodeCmd265 +=
 			" -pix_fmt " + pixelFormat +
 				" -movflags " + "faststart" +
 				" -vsync " + "1" +
@@ -250,19 +259,33 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 				" -preset " + preset +
 				//" -pass " + strconv.Itoa(pass) +
 				//" -passlogfile " + outputPath +
-				" -f " + videoFormat
-
-		if videoCodec == "libx265" {
-			encodeCmd += " -tag:v " + tagVideo
+				" -f " + videoFormat +
+				" -tag:v " + tagVideo +
+				" -y " + outputPath
+		} else if videoCodec == "libx264" {
+			//integrate watermark
+			encodeCmd264 +=
+					" -ignore_loop " + "0" +
+					" -i " + "/tmp/watermark.gif" +
+					" -pix_fmt " + pixelFormat +
+					" -movflags " + "faststart" +
+					" -vsync " + "1" +
+					" -vcodec " + videoCodec +
+					" -r " + strconv.Itoa(framerate) +
+					" -threads " + os.Getenv("FFMPEG_THREAD_COUNT") +
+					" -b:v: " + bitRate +
+					" -bufsize " + bufferSize +
+					" -maxrate " + maxRate +
+					" -preset " + preset +
+					" -filter_complex " + "[1:v]scale=194:124[v1];[0:v][v1]overlay='mod(trunc((t+4.95)/4.95),2)*(W-w-0)':'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':enable='gt(t,0)':shortest=1" +
+					" -y " + outputPath
 		}
-
-		if pass == 1 {
-			encodeCmd += " /dev/null -y"
-		} else {
-			encodeCmd += " -y " + outputPath
-		}
+		//if pass == 1 {
+		//	encodeCmd += " /dev/null -y"
+		//} else {
+		//	encodeCmd += " -y " + outputPath
+		//}
 	}
-
 	return
 }
 
@@ -292,7 +315,8 @@ func uploadFile(ctx context.Context, fpath, jobID string, format model.Format) e
 		pathArr := strings.Split(encode.Destination, "/")
 		bucket := pathArr[3]
 		object := strings.Split(encode.Destination, pathArr[3]+"/")[1]
-		filepath := fpath + "_" + encode.VideoCodec + "_" + encode.Size
+		filepath := fpath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
+		fmt.Println(filepath, bucket, object)
 		file, err := os.Open(filepath)
 		writeContext := storageClient.Bucket(bucket).Object(object).NewWriter(gsContext)
 		writeContext.ACL = []storage.ACLRule{{Role: storage.RoleReader, Entity: storage.AllUsers}}
@@ -367,6 +391,7 @@ func migrateToColdline(ctx context.Context, jobID string, format model.Format) e
 }
 
 func downloadObjectToLocal(bucket, object, localDirectory string) error {
+	fmt.Println("Downloading")
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx,
 		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
