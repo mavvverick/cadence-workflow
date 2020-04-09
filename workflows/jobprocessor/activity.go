@@ -189,10 +189,12 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.F
 func downloadFile(ctx context.Context,jobID, url, watermarkURL string) (*model.DownloadObject, error) {
 	fmt.Println(jobID, time.Now(), "Download Activity -> Start")
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
-	object := strings.Split(url, ".com/")[1]
-	localFileName := localDirectory + strings.Split(object, "/")[0] + "_" + strings.Split(object, "/")[2]
+	objectPath := strings.Split(url, ".com/")[1]
+	object := strings.Split(objectPath, "/")
 
-	err := downloadObjectToLocal(bucket, object, localFileName)
+	localFileName := localDirectory + object[0] + "_" + object[len(object)-1]
+
+	err := downloadObjectToLocal(bucket, objectPath, localFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -284,14 +286,15 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 			if strings.Split(dO.Watermark, ".")[1] == "gif" {
 				encodeCmd264 += " -ignore_loop " + "0"
 				filterComplex = fmt.Sprintf("[1:v]scale=%v:%v[v1];[0:v][v1]overlay=" +
-					"'mod(trunc((t+4.95)/4.95),2)*(W-w-0)':" +
-					"'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':" +
+					"'mod(trunc((t+0)/5),2)*(W-w-0)':" +
+					"'mod(trunc((t+0)/5),2)*(H-h-0)':" +
 					"enable='gt(t,0)':%v", 194, 124, "shortest=1")
 			} else if strings.Split(dO.Watermark, ".")[1] == "png" {
-				filterComplex = fmt.Sprintf("[1:v]scale=%v:%v[v1];[0:v][v1]overlay=" +
-					"'mod(trunc((t+4.95)/4.95),2)*(W-w-0)':" +
-					"'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':" +
-					"enable='gt(t,0)'", 194, 124)
+				filterComplex = fmt.Sprintf("[1:v]scale=%v:%v[v1];" +
+					"[0:v][v1]overlay='if(eq(mod(trunc((t+0)/5),2),0)," +
+					"(15),(W-w-15))':" +
+					"'if(eq(mod(trunc((t+0)/5),2),0),(15)," +
+					"(H-h-15))':enable='gt(t,0)'", 146, 60)
 			}
 			//integrate watermark
 			encodeCmd264 +=
