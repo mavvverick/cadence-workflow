@@ -48,8 +48,9 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 		RetryPolicy: &cadence.RetryPolicy{
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute * 10,
+			MaximumInterval:          time.Minute * 5,
 			ExpirationInterval:       time.Hour * 10,
+			MaximumAttempts:          2,
 			NonRetriableErrorReasons: []string{"bad-error"},
 		},
 	}
