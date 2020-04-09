@@ -137,25 +137,25 @@ func waitForDecisionActivity(ctx context.Context, jobID string) (string, error) 
 	return "", fmt.Errorf("register callback failed status:%s", status)
 }
 
-func downloadFileActivity(ctx context.Context, jobID, url, watermark string) (string, error) {
+func downloadFileActivity(ctx context.Context, jobID, url, watermark string) (*model.DownloadObject, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Downloading file...", zap.String("File URL", url))
 
-	fpath, err := downloadFile(ctx, jobID, url, watermark)
+	dO, err := downloadFile(ctx, jobID, url, watermark)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), "downloadFile Activity -> Failed")
-		return "", err
+		return nil, err
 	}
-	return fpath, nil
+
+	return dO, nil
 }
 
-func compressFileActivity(ctx context.Context, jobID string, filepath string, format model.Format) error {
+func compressFileActivity(ctx context.Context, jobID string, dO model.DownloadObject, format model.Format) error {
 	// var compressFlag string
 	logger := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	logger.Info("compressFileActivity started.", zap.String("FileName", filepath))
-
+	logger.Info("compressFileActivity started.", zap.String("FileName", dO.VideoPath))
 	// process the file
-	err := compressFile(ctx, filepath, jobID, format)
+	err := compressFile(ctx, dO, jobID, format)
 
 	if err != nil {
 		logger.Error("compressFileActivity failed to compress file.", zap.Error(err))
@@ -186,7 +186,7 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.F
 	return nil
 }
 
-func downloadFile(ctx context.Context,jobID, url, watermarkURL string) (string, error) {
+func downloadFile(ctx context.Context,jobID, url, watermarkURL string) (*model.DownloadObject, error) {
 	fmt.Println(jobID, time.Now(), "Download Activity -> Start")
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
 	object := strings.Split(url, ".com/")[1]
@@ -194,28 +194,28 @@ func downloadFile(ctx context.Context,jobID, url, watermarkURL string) (string, 
 
 	err := downloadObjectToLocal(bucket, object, localFileName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	//check cache or else download watermark gif
-
+	//check cache or else download watermark gif/png
 	waterMarkURLSplit := strings.Split(watermarkURL, "/")
-
 	waterMarkFileName := waterMarkURLSplit[len(waterMarkURLSplit)-1]
-	fmt.Println(watermarkURL, waterMarkFileName, waterMarkURLSplit)
 
 	if _, err := os.Stat(localDirectory + waterMarkFileName); err != nil {
 		err = downloadFileWithURL(localDirectory + waterMarkFileName, watermarkURL)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	fmt.Println(jobID, time.Now(), "Download Activity -> Finished")
-	return strings.Split(localFileName, ".")[0], nil
+	return &model.DownloadObject{
+		VideoPath: strings.Split(localFileName, ".")[0],
+		Watermark: waterMarkFileName,
+	}, nil
 }
 
-func compressFile(ctx context.Context, filepath, jobID string, format model.Format) error {
+func compressFile(ctx context.Context, dO model.DownloadObject, jobID string, format model.Format) error {
 	fmt.Println(jobID, time.Now(), "compressFile Activity -> Start")
 
 	// Two pass encoding
@@ -228,7 +228,7 @@ func compressFile(ctx context.Context, filepath, jobID string, format model.Form
 	// }
 	// fmt.Println(jobID, time.Now(), "compressFile Activity -> Encoding Pass 1")
 
-	encodeCmd264, encodeCmd265 := createEncodeCommand(filepath, 2, format.Encode)
+	encodeCmd264, encodeCmd265 := createEncodeCommand(dO, format.Encode)
 	args264 := strings.Fields(encodeCmd264)
 	cmd264 := exec.Command(args264[0], args264[1:]...)
 	err := executeEncodeCommand(ctx, cmd264)
@@ -248,9 +248,9 @@ func compressFile(ctx context.Context, filepath, jobID string, format model.Form
 	return nil
 }
 
-func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (encodeCmd264, encodeCmd265 string) {
-	encodeCmd264 = "ffmpeg" + " -i " + filepath + ".mp4"
-	encodeCmd265 = "ffmpeg" + " -i " + filepath + ".mp4"
+func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encodeCmd264, encodeCmd265 string) {
+	encodeCmd264 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
+	encodeCmd265 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
 
 	for _, encode := range encodes {
 		pixelFormat := "yuv420p"
@@ -260,7 +260,7 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 		bitRate, bufferSize, maxRate := rate, rate, rate
 		preset, videoFormat := "medium", encode.VideoFormat
 
-		outputPath := filepath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
+		outputPath := dO.VideoPath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
 
 		if videoCodec == "libx265" {
 			encodeCmd265 +=
@@ -280,10 +280,23 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 				" -tag:v " + tagVideo +
 				" -y " + outputPath
 		} else if videoCodec == "libx264" {
+			filterComplex := ""
+			if strings.Split(dO.Watermark, ".")[1] == "gif" {
+				encodeCmd264 += " -ignore_loop " + "0"
+				filterComplex = fmt.Sprintf("[1:v]scale=%v:%v[v1];[0:v][v1]overlay=" +
+					"'mod(trunc((t+4.95)/4.95),2)*(W-w-0)':" +
+					"'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':" +
+					"enable='gt(t,0)':%v", 194, 124, "shortest=1")
+			} else if strings.Split(dO.Watermark, ".")[1] == "png" {
+				filterComplex = fmt.Sprintf("[1:v]scale=%v:%v[v1];[0:v][v1]overlay=" +
+					"'mod(trunc((t+4.95)/4.95),2)*(W-w-0)':" +
+					"'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':" +
+					"enable='gt(t,0)'", 194, 124)
+			}
 			//integrate watermark
 			encodeCmd264 +=
-					" -ignore_loop " + "0" +
-					" -i " + localDirectory + waterMarkFileName +
+					" -i " + localDirectory + dO.Watermark +
+					" -filter_complex " + filterComplex +
 					" -pix_fmt " + pixelFormat +
 					" -movflags " + "faststart" +
 					" -vsync " + "1" +
@@ -294,7 +307,6 @@ func createEncodeCommand(filepath string, pass int, encodes []model.Encode) (enc
 					" -bufsize " + bufferSize +
 					" -maxrate " + maxRate +
 					" -preset " + preset +
-					" -filter_complex " + "[1:v]scale=194:124[v1];[0:v][v1]overlay='mod(trunc((t+4.95)/4.95),2)*(W-w-0)':'mod(trunc((t+4.95)/4.95),2)*(H-h-0)':enable='gt(t,0)':shortest=1" +
 					" -y " + outputPath
 		}
 		//if pass == 1 {

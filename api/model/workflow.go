@@ -8,6 +8,10 @@ type Workflow struct {
 	RunID string `json:"rid,omitempty"`
 }
 
+type DownloadObject struct {
+	VideoPath string
+	Watermark string
+}
 // Validate ...
 func (c *Workflow) Validate(ctx context.Context) error {
 	return ValidateFields(c)

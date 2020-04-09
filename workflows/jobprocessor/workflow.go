@@ -70,10 +70,9 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	defer workflow.CompleteSession(processJobSessionContext)
 
 	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
-	var filePath string
+	var dO model.DownloadObject
 	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
-		jobID, format.Source, format.WatermarkURL).Get(processJobSessionContext, &filePath)
-
+		jobID, format.Source, format.WatermarkURL).Get(processJobSessionContext, &dO)
 	if err != nil {
 		cb.PushMessage("DOWNLOAD", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed downloadFileActivity", zap.Error(err))
@@ -81,7 +80,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	}
 
 	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
-		jobID, filePath, format).Get(processJobSessionContext, nil)
+		jobID, dO, format).Get(processJobSessionContext, nil)
 	if err != nil {
 		cb.PushMessage("COMPRESSION", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
@@ -89,7 +88,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	}
 
 	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
-		jobID, filePath, format).Get(processJobSessionContext, nil)
+		jobID, dO.VideoPath, format).Get(processJobSessionContext, nil)
 	if err != nil {
 		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
 		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
