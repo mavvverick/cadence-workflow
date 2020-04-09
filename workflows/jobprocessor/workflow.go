@@ -72,7 +72,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	var filePath string
 	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
-		jobID, format.Source).Get(processJobSessionContext, &filePath)
+		jobID, format.Source, format.WatermarkURL).Get(processJobSessionContext, &filePath)
 
 	if err != nil {
 		cb.PushMessage("DOWNLOAD", "task", jobID, "error", format.Encode)

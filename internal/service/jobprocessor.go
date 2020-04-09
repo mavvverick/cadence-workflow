@@ -33,6 +33,8 @@ type JobProcessorService struct {
 // CreateJob ...
 func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error) {
 	var encodes []model.Encode
+	videoFormat := model.NewVideoFormat()
+
 	query := queryParams.Query
 	for _, format := range query.Format {
 		mp4EncodeParams := model.NewMP4Encode()
@@ -44,17 +46,18 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.
 			SetBitRate(format.Bitrate).
 			SetBufferSize(format.Bitrate).
 			SetMaxRate(format.Bitrate).
-			SetVideoFormat(format.FileExtension).
-			GetEncode()
+			SetVideoFormat(format.FileExtension)
+		if format.VideoCodec == "libx264" {
+			videoFormat.SetFormatWatermarkURL(format.Logo.Source)
+		}
 		encodes = append(encodes, mp4EncodeParams.GetEncode())
 	}
-	videoFormat := model.NewVideoFormat()
+
 	videoFormat.
 		SetFormatSource(query.Source).
 		SetFormatCallbackURL(query.CallbackURL).
 		SetFormatPayload(query.Payload).
-		SetFormatEncode(encodes).
-		GetFormat()
+		SetFormatEncode(encodes)
 
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                              "jobProcessing_" + uuid.New().String(),

@@ -137,11 +137,11 @@ func waitForDecisionActivity(ctx context.Context, jobID string) (string, error) 
 	return "", fmt.Errorf("register callback failed status:%s", status)
 }
 
-func downloadFileActivity(ctx context.Context, jobID, url string) (string, error) {
+func downloadFileActivity(ctx context.Context, jobID, url, watermark string) (string, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Downloading file...", zap.String("File URL", url))
 
-	fpath, err := downloadFile(ctx, url, jobID)
+	fpath, err := downloadFile(ctx, jobID, url, watermark)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), "downloadFile Activity -> Failed")
 		return "", err
@@ -186,7 +186,7 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.F
 	return nil
 }
 
-func downloadFile(ctx context.Context, url, jobID string) (string, error) {
+func downloadFile(ctx context.Context,jobID, url, watermarkURL string) (string, error) {
 	fmt.Println(jobID, time.Now(), "Download Activity -> Start")
 	bucket := strings.Split(strings.Split(url, ".")[0], "//")[1]
 	object := strings.Split(url, ".com/")[1]
@@ -198,8 +198,14 @@ func downloadFile(ctx context.Context, url, jobID string) (string, error) {
 	}
 
 	//check cache or else download watermark gif
+
+	waterMarkURLSplit := strings.Split(watermarkURL, "/")
+
+	waterMarkFileName := waterMarkURLSplit[len(waterMarkURLSplit)-1]
+	fmt.Println(watermarkURL, waterMarkFileName, waterMarkURLSplit)
+
 	if _, err := os.Stat(localDirectory + waterMarkFileName); err != nil {
-		err = downloadObjectToLocal(bucket, watermarkFolder+"/"+waterMarkFileName, localDirectory + waterMarkFileName)
+		err = downloadFileWithURL(localDirectory + waterMarkFileName, watermarkURL)
 		if err != nil {
 			return "", err
 		}
@@ -426,4 +432,25 @@ func downloadObjectToLocal(bucket, object, localDirectory string) error {
 	}
 
 	return nil
+}
+
+func downloadFileWithURL(filepath string, url string) error {
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
 }

@@ -29,6 +29,7 @@ type FormatBody struct {
 	AudioBitrate        string `json:"audio_bitrate"`
 	AudioSampleRate     string `json:"audio_sample_rate"`
 	AudioChannelsNumber string `json:"audio_channels_number"`
+	Logo 				Logo
 }
 
 // DestinationBody ...
@@ -53,12 +54,19 @@ type VideoCodecParamters struct {
 	BStrategy  string  `json:"b_strategy"`
 }
 
+type Logo struct {
+	Source string
+	X string
+	Y string
+}
+
 // Format ...
 type Format struct {
 	Source      string
 	CallbackURL string
 	Payload     string
 	Encode      []Encode
+	WatermarkURL string
 }
 
 //BuildFormat ...
@@ -67,6 +75,7 @@ type BuildFormat interface {
 	SetFormatCallbackURL(string) BuildFormat
 	SetFormatPayload(string) BuildFormat
 	SetFormatEncode([]Encode) BuildFormat
+	SetFormatWatermarkURL(string) BuildFormat
 	GetFormat() Format
 }
 
@@ -98,6 +107,12 @@ func (v *VideoFormat) SetFormatCallbackURL(s string) BuildFormat {
 	return v
 }
 
+//SetFormatCallbackURL ...
+func (v *VideoFormat) SetFormatWatermarkURL(s string) BuildFormat {
+	v.format.WatermarkURL = s
+	return v
+}
+
 //SetFormatEncode ...
 func (v *VideoFormat) SetFormatEncode(encodes []Encode) BuildFormat {
 	for _, encode := range encodes {
@@ -118,17 +133,17 @@ func (c *QueryParams) Validate(ctx context.Context) error {
 
 //Encode ...
 type Encode struct {
-	Source      string
-	Destination string
-	Size        string
-	PixelFormat string
-	VideoCodec  string
-	FrameRate   int
-	BitRate     int
-	BufferSize  int
-	MaxRate     int
-	Preset      string
-	VideoFormat string
+	Source      	string
+	Destination 	string
+	Size        	string
+	PixelFormat 	string
+	VideoCodec  	string
+	FrameRate   	int
+	BitRate     	int
+	BufferSize  	int
+	MaxRate     	int
+	Preset      	string
+	VideoFormat 	string
 }
 
 //BuildEncode ...
