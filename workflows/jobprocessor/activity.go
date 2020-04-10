@@ -268,14 +268,13 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 			encodeCmd265 +=
 			" -pix_fmt " + pixelFormat +
 				" -movflags " + "faststart" +
-				" -vsync " + "1" +
 				" -vcodec " + videoCodec +
 				" -r " + strconv.Itoa(framerate) +
 				" -threads " + os.Getenv("FFMPEG_THREAD_COUNT") +
 				" -b:v: " + bitRate +
 				" -bufsize " + bufferSize +
 				" -maxrate " + maxRate +
-				" -preset " + preset +
+				" -preset " + "ultrafast" +
 				//" -pass " + strconv.Itoa(pass) +
 				//" -passlogfile " + outputPath +
 				" -f " + videoFormat +
@@ -302,7 +301,6 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 					" -filter_complex " + filterComplex +
 					" -pix_fmt " + pixelFormat +
 					" -movflags " + "faststart" +
-					" -vsync " + "1" +
 					" -vcodec " + videoCodec +
 					" -r " + strconv.Itoa(framerate) +
 					" -threads " + os.Getenv("FFMPEG_THREAD_COUNT") +
