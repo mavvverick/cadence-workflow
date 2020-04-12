@@ -29,8 +29,7 @@ func (l *JobProcessorController) CreateJob(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	l.WriteJSON(r, w, http.StatusOK, exec)
-
+	l.WriteJSON(r, w, http.StatusOK, exec.ID)
 }
 
 //ActionHandler ....

@@ -30,8 +30,8 @@ func (c *BaseController) WriteWithStatus(w http.ResponseWriter, statusCode int) 
 func (c *BaseController) WriteJSON(r *http.Request, w http.ResponseWriter, statusCode int, v interface{}) error {
 	w.WriteHeader(statusCode)
 	resp := model.SuccessResponse{
-		Success: true,
-		Data:    v,
+		Message:   v.(string),
+		StatusURL: "success",
 	}
 	return c.writeJSON(w, resp)
 }
@@ -44,7 +44,7 @@ func (c *BaseController) WriteError(r *http.Request, w http.ResponseWriter, err 
 	return c.writeJSON(w, &model.ErrorResponse{
 		Success: false,
 		Error: model.HTTPError{
-			Code:    code,
+			Error:   code,
 			Message: err.Error(),
 		},
 	})
@@ -59,7 +59,7 @@ func (c *BaseController) WriteErrorWithMessage(r *http.Request, w http.ResponseW
 	return c.writeJSON(w, &model.ErrorResponse{
 		Success: false,
 		Error: model.HTTPError{
-			Code:    code,
+			Error:   code,
 			Message: message,
 		},
 	})

@@ -2,8 +2,8 @@ package model
 
 //SuccessResponse ...
 type SuccessResponse struct {
-	Success bool        `json:"success" example:"true"`
-	Data    interface{} `json:"data,omitempty" `
+	Message   string `json:"message,omitempty"`
+	StatusURL string `json:"status_url,omitempty"`
 }
 
 //ErrorResponse ...
@@ -14,6 +14,6 @@ type ErrorResponse struct {
 
 //HTTPError ...
 type HTTPError struct {
-	Code    uint32 `json:"code" example:"40001"`
+	Error   uint32 `json:"error,omitempty"`
 	Message string `json:"message" example:"status bad request"`
 }
