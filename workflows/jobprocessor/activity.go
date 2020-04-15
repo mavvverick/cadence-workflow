@@ -3,10 +3,11 @@ package jobprocessor
 import (
 	"context"
 	"fmt"
-	"github.com/YOVO-LABS/workflow/pkg"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/YOVO-LABS/workflow/pkg"
 
 	"github.com/YOVO-LABS/workflow/api/model"
 	"google.golang.org/api/option"
@@ -20,19 +21,19 @@ import (
  * Sample activities used by file processing sample workflow.
  */
 const (
-	downloadFileActivityName		= "downloadFileActivity"
-	compressMediaActivityName		= "compressMediaActivity"
-	addThumbnailActivityname		= "addThumbnailActivity"
-	uploadFileActivityName			= "uploadFileActivity"
+	downloadFileActivityName  = "downloadFileActivity"
+	compressMediaActivityName = "compressMediaActivity"
+	addThumbnailActivityname  = "addThumbnailActivity"
+	uploadFileActivityName    = "uploadFileActivity"
 
-	migrateToColdLineActivityName	= "migrateToColdLineActivity"
-	srcDirectory                  	= "raw/"
-	processedDirectory            	= "processed/"
-	blackHole                     	= "blackHole/"
-	localDirectory					= "/tmp/"
-	localProcessedDirectory       	= "/tmp/"
-	waterMarkFileName             	= "watermark.gif"
-	watermarkFolder               	= "pilot"
+	migrateToColdLineActivityName = "migrateToColdLineActivity"
+	srcDirectory                  = "raw/"
+	processedDirectory            = "processed/"
+	blackHole                     = "blackHole/"
+	localDirectory                = "/tmp/"
+	localProcessedDirectory       = "/tmp/"
+	waterMarkFileName             = "watermark.gif"
+	watermarkFolder               = "pilot"
 )
 
 // This is registration process where you register all your activity handlers.
@@ -133,7 +134,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 			return nil, err
 		}
 	}
-	dO.Watermark = localDirectory+watermarkFileName
+	dO.Watermark = localDirectory + watermarkFileName
 
 	return &dO, nil
 }
@@ -195,8 +196,8 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 
 func createThumbnail(dO model.DownloadObject) error {
 	imgPath := localDirectory + dO.UserImage
-	poster := pkg.DrawPoster {
-		BG:   dO.Background,
+	poster := pkg.DrawPoster{
+		BG: dO.Background,
 		User: pkg.User{
 			Name:  "@" + dO.UserImage,
 			Image: imgPath + ".jpg",
@@ -211,7 +212,7 @@ func createThumbnail(dO model.DownloadObject) error {
 
 	fileIn := imgPath + ".png"
 	fileOut := imgPath + ".mp4"
-	err = PngToMp4(fileIn, fileOut)
+	err = pngToMp4(fileIn, fileOut)
 	if err != nil {
 		return err
 	}
@@ -251,7 +252,7 @@ func uploadFile(fpath string, format model.Format) error {
 		}
 		if (model.Logo{}) != encode.Logo {
 			filepath = fpath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
-			gcsPathField := strings.Split(object, "/" + pathArr[len(pathArr)-2])
+			gcsPathField := strings.Split(object, "/"+pathArr[len(pathArr)-2])
 			object = gcsPathField[0] + gcsPathField[1]
 			err := uploadToGCS(ctx, *storageClient, filepath, bucket, object)
 			if err != nil {

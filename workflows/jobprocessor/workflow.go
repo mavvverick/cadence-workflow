@@ -11,23 +11,22 @@ import (
 )
 
 const (
-	TaskList						= "JobProcessor"
-	SessionCreationErrorMsg			= "Session Creation Failed"
-	DownloadActivityErrorMsg		= "Failed Download Activity"
-	CompressionActivityErrorMsg		= "Failed Compression Activity"
-	UploadActivityErrorMsg			= "Failed Upload Activity"
-	Download						= "DOWNLOAD"
-	Compression						= "COMPRESSION"
-	Upload 							= "UPLOAD"
-	Task							= "task"
-	CallbackErrorEvent				= "error"
-	Completed						= "COMPLETED"
+	TaskList                    = "JobProcessor"
+	SessionCreationErrorMsg     = "Session Creation Failed"
+	DownloadActivityErrorMsg    = "Failed Download Activity"
+	CompressionActivityErrorMsg = "Failed Compression Activity"
+	UploadActivityErrorMsg      = "Failed Upload Activity"
+	Download                    = "DOWNLOAD"
+	Compression                 = "COMPRESSION"
+	Upload                      = "UPLOAD"
+	Task                        = "task"
+	CallbackErrorEvent          = "error"
+	Completed                   = "COMPLETED"
 )
 
 func init() {
 	workflow.Register(Workflow)
 }
-
 
 // Workflow Session Based to perform download, compression and upload
 func Workflow(ctx workflow.Context, jobID string, format model.Format) error {

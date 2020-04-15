@@ -2,11 +2,6 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/disintegration/gift"
-	"github.com/golang/freetype"
-	"github.com/golang/freetype/truetype"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
 	"image"
 	"image/draw"
 	"image/jpeg"
@@ -14,18 +9,24 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/disintegration/gift"
+	"github.com/golang/freetype"
+	"github.com/golang/freetype/truetype"
+	"golang.org/x/image/font"
+	"golang.org/x/image/math/fixed"
 )
 
-type  DrawPoster struct {
-	BG string
+type DrawPoster struct {
+	BG   string
 	Logo string
 	User User
 }
 
 type User struct {
-	Name string
+	Name  string
 	Image string
-	Font string
+	Font  string
 }
 
 func (d *DrawPoster) BuildImage() error {
