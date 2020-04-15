@@ -9,8 +9,11 @@ type Workflow struct {
 }
 
 type DownloadObject struct {
-	VideoPath string
-	Watermark string
+	VideoPath	string
+	Watermark 	string
+	UserImage 	string
+	Background	string
+	Font		string
 }
 // Validate ...
 func (c *Workflow) Validate(ctx context.Context) error {

@@ -144,6 +144,7 @@ type Encode struct {
 	MaxRate     	int
 	Preset      	string
 	VideoFormat 	string
+	Logo 			Logo
 }
 
 //BuildEncode ...
@@ -159,6 +160,7 @@ type BuildEncode interface {
 	SetMaxRate(int) BuildEncode
 	SetPreset(string) BuildEncode
 	SetVideoFormat(string) BuildEncode
+	SetWatermarkURL(string) BuildEncode
 	GetEncode() Encode
 }
 
@@ -245,6 +247,11 @@ func (l *MP4Encode) SetVideoFormat(s string) BuildEncode {
 //SetBufferSize ...
 func (l *MP4Encode) SetBufferSize(s int) BuildEncode {
 	l.encode.BufferSize = s
+	return l
+}
+
+func (l *MP4Encode) SetWatermarkURL(s string) BuildEncode {
+	l.encode.Logo.Source = s
 	return l
 }
 

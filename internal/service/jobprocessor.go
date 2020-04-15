@@ -47,7 +47,8 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.
 			SetBufferSize(format.Bitrate).
 			SetMaxRate(format.Bitrate).
 			SetVideoFormat(format.FileExtension)
-		if format.VideoCodec == "libx264" {
+		if  (model.Logo{}) != format.Logo  {
+			mp4EncodeParams.SetWatermarkURL(format.Logo.Source)
 			videoFormat.SetFormatWatermarkURL(format.Logo.Source)
 		}
 		encodes = append(encodes, mp4EncodeParams.GetEncode())

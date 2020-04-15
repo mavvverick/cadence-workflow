@@ -5,42 +5,37 @@ import (
 
 	"github.com/YOVO-LABS/workflow/api/model"
 	"github.com/YOVO-LABS/workflow/internal/handler"
-	"github.com/pborman/uuid"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
 
-// ApplicationName is the name of the tasklist
 const (
-	jobServerURL    = "http://localhost:4000"
-	TaskList        = "JobProcessor"
-	ApplicationName = "JobProcessor"
+	TaskList						= "JobProcessor"
+	SessionCreationErrorMsg			= "Session Creation Failed"
+	DownloadActivityErrorMsg		= "Failed Download Activity"
+	CompressionActivityErrorMsg		= "Failed Compression Activity"
+	UploadActivityErrorMsg			= "Failed Upload Activity"
+	Download						= "DOWNLOAD"
+	Compression						= "COMPRESSION"
+	Upload 							= "UPLOAD"
+	Task							= "task"
+	CallbackErrorEvent				= "error"
+	Completed						= "COMPLETED"
 )
-
-// HostID represents the hostname or the ip address of the worker
-var HostID = ApplicationName + "_" + uuid.New()
 
 func init() {
 	workflow.Register(Workflow)
 }
 
-//ExecutionTime ..
-type ExecutionTime struct {
-	DownloadActivity float64
-	EncodeActivity   float64
-	UploadActivity   float64
-	WFID             string
-	FFExec0          string
-	FFExec1          string
-}
 
-// Workflow workflow
-func Workflow(ctx workflow.Context, jobID string, format model.Format) (result string, err error) {
+// Workflow Session Based to perform download, compression and upload
+func Workflow(ctx workflow.Context, jobID string, format model.Format) error {
 
 	cb := handler.NewCallbackInfo(&format)
+	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 
-	processingActivityOptions := workflow.ActivityOptions{
+	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    time.Minute * 5,
 		ScheduleToCloseTimeout: time.Minute * 5,
@@ -54,56 +49,48 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) (result s
 			NonRetriableErrorReasons: []string{"bad-error"},
 		},
 	}
-	processJobContext := workflow.WithActivityOptions(ctx, processingActivityOptions)
-	logger := workflow.GetLogger(processJobContext)
+	jobCtx := workflow.WithActivityOptions(ctx, ao)
+	logger := workflow.GetLogger(jobCtx)
 
-	processJobSessionOptions := &workflow.SessionOptions{
+	so := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
 		ExecutionTimeout: time.Minute * 5,
 		HeartbeatTimeout: time.Minute * 3,
 	}
 
-	processJobSessionContext, err := workflow.CreateSession(processJobContext, processJobSessionOptions)
+	ctx, err := workflow.CreateSession(jobCtx, so)
 	if err != nil {
-		logger.Error("Failed to create session context", zap.Error(err))
-		return "", cadence.NewCustomError(err.Error(), "Session Creation Failed")
+		logger.Error(SessionCreationErrorMsg, zap.Error(err))
+		return cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)
 	}
-	defer workflow.CompleteSession(processJobSessionContext)
+	defer workflow.CompleteSession(ctx)
 
-	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 	var dO model.DownloadObject
-	err = workflow.ExecuteActivity(processJobSessionContext, downloadFileActivity,
-		jobID, format.Source, format.WatermarkURL).Get(processJobSessionContext, &dO)
+
+	err = workflow.ExecuteActivity(ctx, downloadFileActivity,
+		jobID, format.Source, format.Payload, format.WatermarkURL).Get(ctx, &dO)
 	if err != nil {
-		cb.PushMessage("DOWNLOAD", "task", jobID, "error", format.Encode)
-		logger.Info("Workflow completed with failed downloadFileActivity", zap.Error(err))
-		return "", cadence.NewCustomError(err.Error(), "Failed DownloadActivity")
+		logger.Error(DownloadActivityErrorMsg, zap.Error(err))
+		cb.PushMessage(Download, Task, jobID, CallbackErrorEvent, format.Encode)
+		return cadence.NewCustomError(err.Error(), DownloadActivityErrorMsg)
 	}
 
-	err = workflow.ExecuteActivity(processJobSessionContext, compressFileActivity,
-		jobID, dO, format).Get(processJobSessionContext, nil)
+	err = workflow.ExecuteActivity(ctx, compressMediaActivity,
+		jobID, dO, format).Get(ctx, nil)
 	if err != nil {
-		cb.PushMessage("COMPRESSION", "task", jobID, "error", format.Encode)
-		logger.Info("Workflow completed with failed compressFileActivity", zap.Error(err))
-		return "", cadence.NewCustomError(err.Error(), "Failed compressFileActivity")
+		logger.Error(CompressionActivityErrorMsg, zap.Error(err))
+		cb.PushMessage(Compression, Task, jobID, CallbackErrorEvent, format.Encode)
+		return cadence.NewCustomError(err.Error(), CompressionActivityErrorMsg)
 	}
 
-	err = workflow.ExecuteActivity(processJobSessionContext, uploadFileActivity,
-		jobID, dO.VideoPath, format).Get(processJobSessionContext, nil)
+	err = workflow.ExecuteActivity(ctx, uploadFileActivity,
+		jobID, dO.VideoPath, format).Get(ctx, nil)
 	if err != nil {
-		cb.PushMessage("UPLOADING", "task", jobID, "error", format.Encode)
-		logger.Info("Workflow completed with failed uploadFileActivity", zap.Error(err))
-		return "", cadence.NewCustomError(err.Error(), "Failed uploadFileActivity")
+		logger.Error(UploadActivityErrorMsg, zap.Error(err))
+		cb.PushMessage(Upload, Task, jobID, CallbackErrorEvent, format.Encode)
+		return cadence.NewCustomError(err.Error(), UploadActivityErrorMsg)
 	}
 
-	cb.PushMessage("COMPLETED", "task", jobID, "saved", format.Encode)
-
-	// err = workflow.ExecuteActivity(processJobSessionContext, migrateToColdLineActivity,
-	// 	jobID, format).Get(processJobSessionContext, nil)
-	// if err != nil {
-	// 	logger.Info("Workflow completed with failed migrateToColdLineActivity", zap.Error(err))
-	// 	return "", err
-	// }
-
-	return "COMPLETED", nil
+	cb.PushMessage(Completed, Task, jobID, "saved", format.Encode)
+	return nil
 }
