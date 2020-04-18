@@ -30,7 +30,7 @@ func (c *BaseController) WriteWithStatus(w http.ResponseWriter, statusCode int) 
 func (c *BaseController) WriteJSON(r *http.Request, w http.ResponseWriter, statusCode int, v interface{}) error {
 	w.WriteHeader(statusCode)
 	resp := model.SuccessResponse{
-		Message:   v.(string),
+		Message:   v,
 		StatusURL: "success",
 	}
 	return c.writeJSON(w, resp)

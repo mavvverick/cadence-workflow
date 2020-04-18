@@ -1,8 +1,6 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 
 	messaging "github.com/YOVO-LABS/workflow/common/messaging"
@@ -32,11 +30,8 @@ func (h *AppConfig) LoadConfig(configPath string) {
 	h.Cadence.HostPort = os.Getenv("CADENCE_HOST")
 	h.Cadence.Service = os.Getenv("CADENCE_SERVICE")
 
-	kafkaConfig := []byte(os.Getenv("KAFKA_CONFIG"))
-	err := json.Unmarshal(kafkaConfig, &h)
-	if err != nil {
-		fmt.Printf("Unable to decode into struct, %v", err)
-	}
+	h.Kafka.Brokers = os.Getenv("KAFKA_BROKERS")
+	h.Kafka.Topic = os.Getenv("KAFKA_TOPIC_TEST")
 
 	logger, err := zap.NewDevelopment()
 	if err != nil {

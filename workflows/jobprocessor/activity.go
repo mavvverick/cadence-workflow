@@ -3,6 +3,7 @@ package jobprocessor
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common"
 	"os"
 	"strings"
 	"time"
@@ -30,11 +31,12 @@ const (
 	srcDirectory                  = "raw/"
 	processedDirectory            = "processed/"
 	blackHole                     = "blackHole/"
-	localDirectory                = "/tmp/"
-	localProcessedDirectory       = "/tmp/"
+	localTmpDirectory       = "/tmp/"
 	waterMarkFileName             = "watermark.gif"
 	watermarkFolder               = "pilot"
 )
+
+var localDirectory = common.StringPtr("/tmp/")
 
 // This is registration process where you register all your activity handlers.
 func init() {
@@ -70,8 +72,8 @@ func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark st
 }
 
 func compressMediaActivity(ctx context.Context, jobID string, dO model.DownloadObject, format model.Format) error {
-	logger := activity.GetLogger(ctx).With(zap.String("jobID", jobID))
-	logger.Info("compressFileActivity started.", zap.String("FileName", dO.VideoPath))
+	logger := activity.GetLogger(ctx)
+	logger.Info("compressFileActivity started.", zap.String("jobID", jobID))
 
 	fmt.Println(jobID, time.Now(), "compressFile Activity -> Start")
 
@@ -87,8 +89,8 @@ func compressMediaActivity(ctx context.Context, jobID string, dO model.DownloadO
 }
 
 func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.Format) error {
-	logger := activity.GetLogger(ctx).With(zap.String("HostID", "ABCd"))
-	logger.Info("uploadFileActivity begin", zap.String("FileName", localProcessedDirectory))
+	logger := activity.GetLogger(ctx)
+	logger.Info("uploadFileActivity begin", zap.String("jobID", jobID))
 
 	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Start")
 
@@ -117,8 +119,15 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	}
 	defer client.Close()
 
+	err = os.MkdirAll(*localDirectory+"resources/", 0770)
+	if err != nil {
+		return nil, err
+	}
+
+	localDirectory = common.StringPtr("/tmp/resources/")
+
 	// download video to be encoded
-	localFileName := localDirectory + object[0] + "_" + object[len(object)-1]
+	localFileName := *localDirectory + object[0] + "_" + object[len(object)-1]
 	dO.VideoPath = strings.Split(localFileName, ".")[0]
 	err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, localFileName)
 	if err != nil {
@@ -128,20 +137,64 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	//download watermark logo
 	watermarkURLSplit := strings.Split(watermarkURL, "/")
 	watermarkFileName := watermarkURLSplit[len(watermarkURLSplit)-1]
-	if _, err := os.Stat(localDirectory + watermarkFileName); err != nil {
-		err = downloadFileWithURL(localDirectory+watermarkFileName, watermarkURL)
+	if _, err := os.Stat(*localDirectory + watermarkFileName); err != nil {
+		err = downloadFileWithURL(*localDirectory+watermarkFileName, watermarkURL)
 		if err != nil {
 			return nil, err
 		}
 	}
-	dO.Watermark = localDirectory + watermarkFileName
+	dO.Watermark = *localDirectory + watermarkFileName
 
+	//download background and font for poster
+	payloadFields := strings.Split(payload, "|")
+	if len(payloadFields) == 0 || len(payloadFields) < 3 {
+		return &dO, nil
+	} else {
+		bucket = "yovo-app"
+		objectPath = "pro_images/" + payloadFields[2] + ".jpg"
+		userFileName := *localDirectory + payloadFields[2] + ".jpg"
+
+		//download user profile photo
+		err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, userFileName)
+		if err ==  storage.ErrObjectNotExist {
+			return &dO, nil
+		} else if err != nil {
+			return nil, err
+		}
+		dO.UserImage = payloadFields[2]
+
+		bucket = "yovo-test"
+		objectPath = "resources/background.png"
+		thumbnailBG := localTmpDirectory + "bg.png"
+		if _, err := os.Stat(thumbnailBG); err != nil {
+			//download background for the thumbnail
+			err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, thumbnailBG)
+			if err ==  storage.ErrObjectNotExist {
+				return &dO, err
+			} else if err != nil {
+				return nil, err
+			}
+		}
+		dO.Background = thumbnailBG
+
+		objectPath = "resources/font.ttf"
+		font := localTmpDirectory + "font.ttf"
+		if _, err := os.Stat(font); err != nil {
+			//download font used for the thumbnail
+			err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, font)
+			if err ==  storage.ErrObjectNotExist {
+				return &dO, err
+			} else if err != nil {
+				return nil, err
+			}
+		}
+		dO.Font = font
+	}
 	return &dO, nil
 }
 
 func compressMedia(dO model.DownloadObject, format model.Format) error {
-	encodeCmd264, _, watermarkCmd, _ := createEncodeCommand(dO, format.Encode)
-
+	encodeCmd264, _, watermarkCmd, thumbnailCmd := createEncodeCommand(dO, format.Encode)
 	//encode 240p video using x264
 	err := executeCommand(encodeCmd264)
 	if err != nil {
@@ -156,16 +209,26 @@ func compressMedia(dO model.DownloadObject, format model.Format) error {
 
 	//add watermark to the earlier encoded 540p videos
 	for _, wc := range watermarkCmd {
-		fmt.Println(wc)
 		err = executeCommand(wc)
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := os.Remove(dO.VideoPath + ".mp4"); err != nil {
-		return err
+	if dO.UserImage != "" {
+		err = createThumbnail(dO)
+		if err != nil {
+			return err
+		} else {
+			for _, tc := range thumbnailCmd {
+				err = executeCommand(tc)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -184,18 +247,18 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 			encodeCmd264 += x264EncodeCmd(encode, outputPath)
 		}
 		if (model.Logo{}) != encode.Logo {
-			watermarkCmd = append(watermarkCmd, createWatermarkCmd(encode, dO, "superfast"))
-			//tc, err := createThumbnailCmd(dO, encode.VideoCodec, encode.Size)
-			//if err == nil {
-			//	thumbnailCmd = append(thumbnailCmd, tc)
-			//}
+			watermarkCmd = append(watermarkCmd, createWatermarkCmd(encode, dO, "veryfast"))
+			tc, err := createThumbnailCmd(dO, encode.VideoCodec, encode.Size)
+			if err == nil {
+				thumbnailCmd = append(thumbnailCmd, tc)
+			}
 		}
 	}
 	return
 }
 
 func createThumbnail(dO model.DownloadObject) error {
-	imgPath := localDirectory + dO.UserImage
+	imgPath := *localDirectory + dO.UserImage
 	poster := pkg.DrawPoster{
 		BG: dO.Background,
 		User: pkg.User{
@@ -210,19 +273,7 @@ func createThumbnail(dO model.DownloadObject) error {
 		return err
 	}
 
-	fileIn := imgPath + ".png"
-	fileOut := imgPath + ".mp4"
-	err = pngToMp4(fileIn, fileOut)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(imgPath + ".jpg")
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(fileIn)
+	err = pngToMp4(*localDirectory+poster.User.Name+".png", *localDirectory + dO.UserImage+".mp4")
 	if err != nil {
 		return err
 	}
@@ -240,7 +291,6 @@ func uploadFile(fpath string, format model.Format) error {
 	defer storageClient.Close()
 
 	for _, encode := range format.Encode {
-		//s3://storage.googleapis.com/yovo-test/test/T3/yo540p/1.mp4
 		pathArr := strings.Split(encode.Destination, "/")
 		bucket := pathArr[3]
 		object := strings.Split(encode.Destination, pathArr[3]+"/")[1]
@@ -259,6 +309,10 @@ func uploadFile(fpath string, format model.Format) error {
 				return err
 			}
 		}
+	}
+
+	if err = os.RemoveAll(*localDirectory); err != nil {
+		return err
 	}
 	return nil
 }

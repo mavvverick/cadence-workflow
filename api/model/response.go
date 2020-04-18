@@ -2,7 +2,7 @@ package model
 
 //SuccessResponse ...
 type SuccessResponse struct {
-	Message   string `json:"message,omitempty"`
+	Message   interface{} `json:"message,omitempty"`
 	StatusURL string `json:"status_url,omitempty"`
 }
 

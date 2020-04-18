@@ -11,14 +11,20 @@ type KafkaConsumer struct {
 	Reader *kafka.Reader
 }
 
+type KafkaMessage struct {
+	Key   []byte
+	Value []byte
+}
+
 //NewConsumer creates consumer object to read message
-func NewConsumer(kc *KafkaConfig, broker, topic string) *KafkaConsumer {
-	brokers := kc.getBrokersForKafkaCluster(broker)
+func NewConsumer(kc *KafkaConfig) *KafkaConsumer {
+	kc.Validate()
+	brokers := kc.getBrokersForKafkaCluster([]byte(kc.Brokers))
 
 	reader := kafka.NewReader(
 		kafka.ReaderConfig{
 			Brokers:   brokers,
-			Topic:     topic,
+			Topic:     kc.Topic,
 			Partition: 0,
 			MinBytes:  10e3, // 10KB
 			MaxBytes:  10e6, //10 MB
@@ -30,16 +36,16 @@ func NewConsumer(kc *KafkaConfig, broker, topic string) *KafkaConsumer {
 }
 
 //Consume reads messages from a kafka topic
-func (kp *KafkaProducer) Consume(ctx context.Context, key, msg string) error {
-	err := kp.Writer.WriteMessages(
-		ctx,
-		kafka.Message{
-			Key:   []byte(key),
-			Value: []byte(msg),
-		},
-	)
-	if err != nil {
-		panic(err)
+func (kp *KafkaConsumer) Consume(ctx context.Context) (*KafkaMessage, error) {
+	msg, err := kp.Reader.ReadMessage(ctx)
+
+	kafkaMessage := &KafkaMessage{
+		Key:   msg.Key,
+		Value: msg.Value,
 	}
-	return nil
+
+	if err != nil {
+		return nil, err
+	}
+	return kafkaMessage, err
 }

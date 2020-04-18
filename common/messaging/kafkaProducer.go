@@ -3,7 +3,7 @@ package messaging
 import (
 	"context"
 
-	kafka "github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go"
 )
 
 //KafkaProducer ...
@@ -12,14 +12,15 @@ type KafkaProducer struct {
 }
 
 //NewProducer creates a producer object
-func NewProducer(kc *KafkaConfig, cluster, topic string) *KafkaProducer {
-	brokers := kc.getBrokersForKafkaCluster(cluster)
+func NewProducer(kc *KafkaConfig) *KafkaProducer {
+	kc.Validate()
+
+	brokers := kc.getBrokersForKafkaCluster([]byte(kc.Brokers))
 	writer := kafka.NewWriter(
 		kafka.WriterConfig{
 			Brokers: brokers,
-			Topic:   topic,
+			Topic:   kc.Topic,
 		})
-
 	return &KafkaProducer{
 		Writer: writer,
 	}
@@ -35,7 +36,7 @@ func (kp *KafkaProducer) Publish(ctx context.Context, key, msg string) error {
 		},
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return nil
 }

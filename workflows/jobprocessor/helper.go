@@ -23,7 +23,7 @@ var overlayWatermark = "[1:v]scale=%v:%v[v1];[0:v][v1]overlay='mod(trunc((t+0)/5
 var overlayThumbnail = "color=black:%v:d=%v[base];[0:v]setpts=PTS-STARTPTS[v0];" +
 	"[1:v]format=yuva420p,fade=in:st=0:d=0.4:alpha=1,setpts=PTS-STARTPTS+((%v)/TB)[v1];" +
 	"[base][v0]overlay[tmp];" +
-	"[tmp][v2]overlay,format=yuv420p[fv];" +
+	"[tmp][v1]overlay,format=yuv420p[fv];" +
 	"[0:a]afade=out:st=%v:d=1"
 
 func createWatermarkCmd(encode model.Encode, dO model.DownloadObject, preset string) string {
@@ -53,7 +53,12 @@ func createWatermarkCmd(encode model.Encode, dO model.DownloadObject, preset str
 	outputPath :=
 		dO.VideoPath + "_" +
 			encode.VideoCodec + "_" +
-			encode.Size + ".mp4"
+			encode.Size
+	if dO.UserImage != "" {
+		outputPath += "_wm.mp4"
+	} else {
+		outputPath += ".mp4"
+	}
 
 	watermarkCmd +=
 		" -filter_complex " + filterComplex +
@@ -77,17 +82,12 @@ func createThumbnailCmd(dO model.DownloadObject, codec, size string) (string, er
 	thumbnailCmd :=
 		"ffmpeg" +
 			" -i " + watermarkFilePath +
-			" -i " + localDirectory + dO.UserImage + ".png" +
+			" -i " + *localDirectory + dO.UserImage + ".mp4" +
 			" -filter_complex " + filter +
 			" -preset " + "superfast" +
 			" -map " + "[fv]" +
 			" -y " + inputFilePath
 
-	// remove the tmp file
-	err = os.Remove(watermarkFilePath)
-	if err != nil {
-		return "", nil
-	}
 	return thumbnailCmd, nil
 }
 
@@ -98,7 +98,6 @@ func getMediaDuration(fpath string) (float64, error) {
 		return -1, err
 	}
 
-	fmt.Println(strings.Split(duration, "\n"))
 	duration = strings.Split(strings.Split(duration, "\n")[7], "=")[1]
 	durationInt, err := strconv.ParseFloat(duration, 8)
 	if err != nil {
@@ -113,10 +112,9 @@ func pngToMp4(ImgPath, mp4Path string) error {
 		" -i " + ImgPath +
 		" -c:v " + "libx264" +
 		" -t " + "3" +
-		" -pix_fmt " + "yuv420p" +
-		" -profile:v " + "high" +
-		" -crf " + "20" +
+		" -crf " + "1" +
 		" -preset " + "ultrafast" +
+		" -pix_fmt " + "yuv420p" +
 		" -y " + mp4Path
 
 	err := executeCommand(cmd)
@@ -141,7 +139,7 @@ func executeCommand(execCmd string) error {
 }
 
 func executeCommandWithOutput(execCmd string) (string, error) {
-	var stderr, stdout bytes.Buffer
+	var stderr, _ bytes.Buffer
 
 	args := strings.Fields(execCmd)
 	cmd := exec.Command(args[0], args[1:]...)
@@ -152,7 +150,6 @@ func executeCommandWithOutput(execCmd string) (string, error) {
 	if err != nil {
 		return "", errors.New(stderr.String())
 	}
-	fmt.Println(stdout.String(), stderr.String())
 	outStr := stderr.String()
 	return outStr, nil
 }
@@ -193,6 +190,8 @@ func x264EncodeCmd(encode model.Encode, outputPath string) string {
 			" -s " + encode.Size +
 			" -profile:v " + "high" +
 			" -level " + "4.0" +
+			" -crf " + "31" +
+			" -acodec " + "copy" +
 			" -f " + encode.VideoFormat +
 			" -y " + outputPath
 	return x264Cmd
@@ -260,8 +259,5 @@ func uploadToGCS(ctx context.Context, sc storage.Client, filepath, bucket, objec
 		return err
 	}
 	f.Close()
-	if err := os.Remove(filepath); err != nil {
-		return err
-	}
 	return nil
 }

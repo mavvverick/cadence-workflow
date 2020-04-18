@@ -1,20 +1,17 @@
 package pkg
 
 import (
-	"fmt"
 	"image"
-	"image/draw"
 	"image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/disintegration/gift"
+	"github.com/disintegration/imaging"
+	"github.com/fogleman/gg"
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
 )
 
 type DrawPoster struct {
@@ -40,57 +37,39 @@ func (d *DrawPoster) BuildImage() error {
 		return err
 	}
 
-	dst := image.NewNRGBA(background.Bounds())
-	gift.New().Draw(dst, background)
+	profile = imaging.Resize(profile, 104*1.5, 104*1.5, imaging.Lanczos)
 
 	xBG := (background.Bounds().Max.X - 1) / 2
+	factor := 1.5
+	x1Profile, y1Profile := factor*128, factor*176
+	_, y2Profile := factor*232, factor*280
 
-	xFGProfile := (profile.Bounds().Max.X - 1) / 2
+	mask := gg.NewContext(background.Bounds().Max.X,background.Bounds().Max.Y)
 
-	//xBG-xFGProfile returns the mean of leftmost boundary of background and profile
-	x := xBG - xFGProfile
-	yProfile := int(176 * 1.5) //As per the design
-	gift.New().DrawAt(dst, profile, image.Pt(x, yProfile), gift.OverOperator)
+	mask.DrawCircle(float64(xBG), (y2Profile + y1Profile)/2, (y2Profile-y1Profile)/2)
+	mask.SetRGB(0,0,0)
+	mask.Fill()
+	mask.SetMask(mask.AsMask())
+	mask.DrawImage(profile, int(x1Profile), int(y1Profile))
 
-	//constructing image using username
-	title := d.User.Name
-
-	//load the font type
-	fontType, err := d.LoadFont(d.User.Font)
-	if err != nil {
+	poster := gg.NewContextForImage(background)
+	poster.SetRGB(1, 1, 1)
+	if err := poster.LoadFontFace(d.User.Font, 16*1.5); err != nil {
 		return err
 	}
 
-	//Decide on text color, and text background
-	tSrc, bg := image.White, image.Transparent
+	_, _ = factor*110, factor*292
+	_, y2Text := factor*251, factor*318
+	ringSize := float64(5)
 
-	//Set Width and Height for the rectangle that encpasulates text
-	tWidth, tHeight := background.Bounds().Max.X, 26*1.5 //As per design
-	tRect := image.Rect(0, 0, tWidth, int(tHeight))
-	tRgba := image.NewRGBA(tRect)
-	draw.Draw(tRgba, tRgba.Bounds(), bg, image.ZP, draw.Src)
+	poster.DrawStringAnchored(d.User.Name, float64(xBG), y2Text, 0.5, 0.5)
+	poster.DrawCircle(float64(xBG), (y2Profile + y1Profile)/2, (y2Profile-y1Profile+ringSize)/2)
+	poster.SetRGB(1,1,1)
+	poster.Fill()
+	poster.DrawImage(mask.Image(), 0, 0)
 
-	//Initialize a drawer with size and dpi
-	drawer := &font.Drawer{
-		Dst: tRgba,
-		Src: tSrc,
-		Face: truetype.NewFace(fontType, &truetype.Options{
-			Size: 16 * 1.5,
-			DPI:  72,
-		}),
-	}
-	drawer.Dot = fixed.Point26_6{
-		X: (fixed.I(tWidth) - drawer.MeasureString(title)) / 2,
-		Y: fixed.I(int((tHeight + 10) / 2)),
-	}
-
-	drawer.DrawString(title)
-	gift.New().DrawAt(dst, tRgba, image.Pt(0, int(292*1.5)), gift.OverOperator)
-
-	dstPath := fmt.Sprintf("/tmp/%v.png", title)
-	_, err = d.SaveImage(dstPath, dst)
+	err = poster.SavePNG("/tmp/resources/"+d.User.Name+".png")
 	if err != nil {
-		fmt.Println("error", err)
 		return err
 	}
 	return nil

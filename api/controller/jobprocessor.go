@@ -58,3 +58,19 @@ func (l *JobProcessorController) GetJob(w http.ResponseWriter, r *http.Request) 
 	l.WriteJSON(r, w, http.StatusOK, exec)
 
 }
+
+func (l *JobProcessorController) ListJob(w http.ResponseWriter, r *http.Request) {
+
+	duration, ok := r.URL.Query()["duration"]
+	if !ok {
+		l.WriteErrorWithMessage(r, w, nil, "Missing Query Param Duration")
+	}
+
+	exec, err := l.JobProcessorService.ListJob(r.Context(), duration[0])
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	l.WriteJSON(r, w, http.StatusOK, exec)
+}

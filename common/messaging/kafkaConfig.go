@@ -1,37 +1,35 @@
 package messaging
 
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+)
+
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
-		Clusters map[string]ClusterConfig `yaml:"clusters"`
-		Topics   map[string]TopicConfig   `yaml:"topics"`
+		Topic 	string
+		Brokers string
 	}
 
-	// ClusterConfig describes the configuration for a single Kafka cluster
-	ClusterConfig struct {
-		Brokers []string `yaml:"brokers"`
-	}
-
-	// TopicConfig describes the mapping from topic to Kafka cluster
-	TopicConfig struct {
-		Cluster string `yaml:"cluster"`
+	kafkaBrokers struct {
+		ip []string
 	}
 )
 
 // Validate will validate config for kafka
-func (k *KafkaConfig) Validate(checkCluster bool, checkTopic bool) {
-	if len(k.Clusters) == 0 {
-		panic("Empty Kafka Cluster Config")
+func (k *KafkaConfig) Validate() {
+	if len(k.Brokers) == 0 {
+		fmt.Println(errors.New("Empty Broker"))
 	}
-	if len(k.Topics) == 0 {
-		panic("Empty Topics Config")
+	if len(k.Topic) == 0 {
+		fmt.Println(errors.New("Empty Topic"))
 	}
 }
 
-func (k *KafkaConfig) getKafkaClusterForTopic(topic string) string {
-	return k.Topics[topic].Cluster
-}
-
-func (k *KafkaConfig) getBrokersForKafkaCluster(kafkaCluster string) []string {
-	return k.Clusters[kafkaCluster].Brokers
+func (k *KafkaConfig) getBrokersForKafkaCluster(brokers []byte) []string {
+	var kb kafkaBrokers
+	json.Unmarshal(brokers, &kb.ip)
+	return kb.ip
 }

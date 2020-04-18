@@ -51,11 +51,12 @@ func (h *router) Routes(container *dicontainer.ServiceContainer) {
 
 		r.Post("/v1/start_encode2", container.JobProcessorController.CreateJob)
 		r.Post("/workflow/job/info", container.JobProcessorController.GetJob)
+		r.Get("/workflow/job/list", container.JobProcessorController.ListJob)
 		// r.Post("/workflow/job/create", container.JobProcessorController.CreateJob)
 		r.Get("/workflow/job/start", handler.StartJobHandler)
 		r.Post("/workflow/job/register", handler.CallbackHandler)
 		r.Get("/workflow/job/action", container.JobProcessorController.ActionHandler)
-		r.Get("/workflow/job/list", handler.ListHandler)
+		//r.Get("/workflow/job/list", handler.ListHandler)
 	})
 
 	h.mux.NotFound(container.HTTPErrorController.ResourceNotFound)

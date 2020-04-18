@@ -38,7 +38,11 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 
 	//Services
 	leaderboardService := &service.LeaderboardService{CadenceAdapter: cadenceClient, Logger: container.config.Logger}
-	jobprocessorService := &service.JobProcessorService{CadenceAdapter: cadenceClient, Logger: container.config.Logger}
+	jobprocessorService := &service.JobProcessorService{
+		CadenceAdapter: cadenceClient,
+		KafkaAdapter: kafkaClient,
+		Logger: container.config.Logger,
+	}
 
 	//Initializing controllers
 	container.HTTPErrorController = &controller.HTTPErrorController{BaseController: baseController}
