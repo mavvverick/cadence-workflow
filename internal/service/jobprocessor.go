@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/uber/cadence/common"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -218,17 +217,17 @@ func (b *JobProcessorService) ListJob(ctx context.Context, d string) (*model.Wor
 	}
 
 	//push message to kafka
-	kafkaMsg, err := json.Marshal(&workflowInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	if kafkaMsg != nil {
-		err = b.KafkaAdapter.Producer.Publish(ctx, string(time.Now().UnixNano()), string(kafkaMsg))
-		if err != nil {
-			return nil, err
-		}
-	}
+	//kafkaMsg, err := json.Marshal(&workflowInfo)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//if kafkaMsg != nil {
+	//	err = b.KafkaAdapter.Producer.Publish(ctx, string(time.Now().UnixNano()), string(kafkaMsg))
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	return &workflowInfo, nil
 }

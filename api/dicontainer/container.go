@@ -33,14 +33,14 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 	var cadenceClient adapter.CadenceAdapter
 	cadenceClient.Setup(&container.config.Cadence)
 
-	var kafkaClient adapter.KafkaAdapter
-	kafkaClient.Setup(&container.config.Kafka)
+	//var kafkaClient adapter.KafkaAdapter
+	//kafkaClient.Setup(&container.config.Kafka)
 
 	//Services
 	leaderboardService := &service.LeaderboardService{CadenceAdapter: cadenceClient, Logger: container.config.Logger}
 	jobprocessorService := &service.JobProcessorService{
 		CadenceAdapter: cadenceClient,
-		KafkaAdapter: kafkaClient,
+		//KafkaAdapter: kafkaClient,
 		Logger: container.config.Logger,
 	}
 

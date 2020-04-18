@@ -124,7 +124,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		return nil, err
 	}
 
-	localDirectory = common.StringPtr("/tmp/resources/")
+	localDirectory = common.StringPtr(localTmpDirectory+"resources/")
 
 	// download video to be encoded
 	localFileName := *localDirectory + object[0] + "_" + object[len(object)-1]
@@ -137,13 +137,13 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	//download watermark logo
 	watermarkURLSplit := strings.Split(watermarkURL, "/")
 	watermarkFileName := watermarkURLSplit[len(watermarkURLSplit)-1]
-	if _, err := os.Stat(*localDirectory + watermarkFileName); err != nil {
-		err = downloadFileWithURL(*localDirectory+watermarkFileName, watermarkURL)
+	if _, err := os.Stat(localTmpDirectory + watermarkFileName); err != nil {
+		err = downloadFileWithURL(localTmpDirectory+watermarkFileName, watermarkURL)
 		if err != nil {
 			return nil, err
 		}
 	}
-	dO.Watermark = *localDirectory + watermarkFileName
+	dO.Watermark = localTmpDirectory + watermarkFileName
 
 	//download background and font for poster
 	payloadFields := strings.Split(payload, "|")
@@ -163,8 +163,8 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		}
 		dO.UserImage = payloadFields[2]
 
-		bucket = "yovo-test"
-		objectPath = "resources/background.png"
+		bucket = "yovo-app"
+		objectPath = "assets/background.png"
 		thumbnailBG := localTmpDirectory + "bg.png"
 		if _, err := os.Stat(thumbnailBG); err != nil {
 			//download background for the thumbnail
@@ -177,7 +177,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		}
 		dO.Background = thumbnailBG
 
-		objectPath = "resources/font.ttf"
+		objectPath = "assets/font.ttf"
 		font := localTmpDirectory + "font.ttf"
 		if _, err := os.Stat(font); err != nil {
 			//download font used for the thumbnail
