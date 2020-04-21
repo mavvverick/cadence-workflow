@@ -2,11 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	cron "github.com/YOVO-LABS/workflow/workflows/cron"
 	"github.com/uber/cadence/common"
 	"go.uber.org/cadence/.gen/go/shared"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/YOVO-LABS/workflow/api/model"
@@ -25,7 +29,9 @@ type JobProcessorInterface interface {
 	CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error)
 	NotifyJobStateChange(w http.ResponseWriter, r *http.Request) error
 	GetJobInfo(ctx context.Context, workflowOption *model.Workflow) (interface{}, error)
-	ListJob(ctx context.Context, m string) (*model.WorkflowExecution, error)
+	JobStatusCount(ctx context.Context, m string) (*model.WorkflowExecution, error)
+	GetLogs(ctx context.Context, st, du string) error
+	CreateCron(ctx context.Context, cronTime string) (*workflow.Execution, error)
 }
 
 //JobProcessorService ...
@@ -144,7 +150,7 @@ func (b *JobProcessorService) GetJobInfo(ctx context.Context, workflowOption *mo
 	return execTime, nil
 }
 
-func (b *JobProcessorService) ListJob(ctx context.Context, d string) (*model.WorkflowExecution, error) {
+func (b *JobProcessorService) JobStatusCount(ctx context.Context, d string) (*model.WorkflowExecution, error) {
 	var workflowInfo model.WorkflowExecution
 
 	duration, err := strconv.Atoi(d)
@@ -185,7 +191,7 @@ func (b *JobProcessorService) ListJob(ctx context.Context, d string) (*model.Wor
 			break
 		}
 
-		if listClosedWorkflow.NextPageToken != nil {
+		if len(listClosedWorkflow.NextPageToken) != 0 {
 			requestClosedWorkflow.NextPageToken = listClosedWorkflow.NextPageToken
 		} else {
 			break
@@ -209,12 +215,15 @@ func (b *JobProcessorService) ListJob(ctx context.Context, d string) (*model.Wor
 			workflowInfo.Open = len(listOpenWorkflow.Executions)
 			workflowInfo.Total += workflowInfo.Open
 		}
-		if listOpenWorkflow.NextPageToken != nil {
+		if len(listOpenWorkflow.NextPageToken) != 0 {
 			requestOpenWorkflow.NextPageToken = listOpenWorkflow.NextPageToken
 		} else {
 			break
 		}
 	}
+
+	//taskListResponse, err := b.CadenceAdapter.CadenceClient.DescribeTaskList(ctx, jp.TaskList, shared.TaskListTypeActivity)
+	//workflowInfo.Pollers = len(taskListResponse.Pollers)
 
 	//push message to kafka
 	//kafkaMsg, err := json.Marshal(&workflowInfo)
@@ -223,11 +232,111 @@ func (b *JobProcessorService) ListJob(ctx context.Context, d string) (*model.Wor
 	//}
 	//
 	//if kafkaMsg != nil {
-	//	err = b.KafkaAdapter.Producer.Publish(ctx, string(time.Now().UnixNano()), string(kafkaMsg))
+	//	err = b.KafkaAdapter.Producer.Publish(ctx, "video", string(kafkaMsg))
 	//	if err != nil {
 	//		return nil, err
 	//	}
 	//}
-
 	return &workflowInfo, nil
 }
+
+func (b *JobProcessorService) GetLogs(ctx context.Context, st, du string) error {
+	var workflowInfo model.WorkflowExecution
+
+	duration, err := strconv.Atoi(du)
+	if err != nil {
+		return err
+	}
+
+	starttime, err := time.Parse("2006-01-02T15:04:05", st)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create("/tmp/cadence-logs.csv")
+	if err != nil {
+		return err
+	}
+
+	requestClosedWorkflow := &shared.ListClosedWorkflowExecutionsRequest{
+		MaximumPageSize: common.Int32Ptr(int32(10000)),
+		StartTimeFilter: &shared.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(starttime.Add(time.Duration(-duration)*time.Minute).UnixNano()),
+			LatestTime:   common.Int64Ptr(starttime.UnixNano()),
+		},
+	}
+
+	for true {
+		listClosedWorkflow, err := b.CadenceAdapter.CadenceClient.ListClosedWorkflow(ctx, requestClosedWorkflow)
+		if err != nil {
+			return err
+		}
+		for _, w := range listClosedWorkflow.Executions {
+			fmt.Fprintln(f, w)
+		}
+
+		if len(listClosedWorkflow.NextPageToken) != 0 {
+			requestClosedWorkflow.NextPageToken = listClosedWorkflow.NextPageToken
+		} else {
+			break
+		}
+	}
+
+	requestOpenWorkflow := &shared.ListOpenWorkflowExecutionsRequest{
+		MaximumPageSize: common.Int32Ptr(int32(3)),
+		StartTimeFilter: &shared.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(starttime.Add(time.Duration(-duration)*time.Minute).UnixNano()),
+			LatestTime:   common.Int64Ptr(starttime.UnixNano()),
+		},
+	}
+
+	for true {
+		listOpenWorkflow, err := b.CadenceAdapter.CadenceClient.ListOpenWorkflow(ctx, requestOpenWorkflow)
+		if err != nil {
+			return err
+		}
+		for _, w := range listOpenWorkflow.Executions {
+			fmt.Fprintln(f, w)
+		}
+
+		if len(listOpenWorkflow.Executions) != 0  {
+			workflowInfo.Open = len(listOpenWorkflow.Executions)
+			workflowInfo.Total += workflowInfo.Open
+		}
+		if len(listOpenWorkflow.NextPageToken) != 0 {
+			requestOpenWorkflow.NextPageToken = listOpenWorkflow.NextPageToken
+		} else {
+			break
+		}
+	}
+	return nil
+}
+
+//CreateCron ...
+func (l *JobProcessorService) CreateCron(ctx context.Context, cronTime string) (*workflow.Execution, error) {
+	cronSchedule := strings.Split(cronTime, " ")
+	if len(cronSchedule) == 0 || len(cronSchedule) < 2 {
+		return nil, errors.New("invalid cron expression")
+	}
+	cronTime = fmt.Sprintf("%s %s %s %s %s", cronSchedule[0], cronSchedule[1], "*", "*", "*")
+
+	workflowOptions := client.StartWorkflowOptions{
+		ID:                              "CRON_" + uuid.New().String(),
+		TaskList:                        jp.TaskList,
+		ExecutionStartToCloseTimeout:    time.Hour * 24,
+		DecisionTaskStartToCloseTimeout: time.Hour * 24,
+		CronSchedule:                    cronTime,
+	}
+
+	execution, err := l.CadenceAdapter.CadenceClient.StartWorkflow(
+		context.Background(),
+		workflowOptions,
+		cron.Workflow,
+		uuid.New().String(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return execution, nil
+}
+

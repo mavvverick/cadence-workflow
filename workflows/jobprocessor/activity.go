@@ -157,20 +157,30 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		//download user profile photo
 		err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, userFileName)
 		if err ==  storage.ErrObjectNotExist {
+			objectPath := "assets/background2.mp4"
+			thumbnailBG := localTmpDirectory + "bg2.mp4"
+			if _, err := os.Stat(thumbnailBG); err != nil {
+				//user image doesn't exist, download the alternate thumbnail video
+				err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, thumbnailBG)
+				if err != nil {
+					return nil, err
+				}
+				os.Link(thumbnailBG, *localDirectory + payloadFields[2] + ".mp4")
+			}
+			dO.UserImage = payloadFields[2]
 			return &dO, nil
 		} else if err != nil {
 			return nil, err
 		}
 		dO.UserImage = payloadFields[2]
 
-		bucket = "yovo-app"
 		objectPath = "assets/background.png"
 		thumbnailBG := localTmpDirectory + "bg.png"
 		if _, err := os.Stat(thumbnailBG); err != nil {
 			//download background for the thumbnail
 			err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, thumbnailBG)
 			if err ==  storage.ErrObjectNotExist {
-				return &dO, err
+				return &dO, nil
 			} else if err != nil {
 				return nil, err
 			}
@@ -215,20 +225,17 @@ func compressMedia(dO model.DownloadObject, format model.Format) error {
 		}
 	}
 
-	if dO.UserImage != "" {
-		err = createThumbnail(dO)
-		if err != nil {
-			return err
-		} else {
-			for _, tc := range thumbnailCmd {
-				err = executeCommand(tc)
-				if err != nil {
-					return err
-				}
+	err = createThumbnail(dO)
+	if err != nil {
+		return err
+	} else {
+		for _, tc := range thumbnailCmd {
+			err = executeCommand(tc)
+			if err != nil {
+				return err
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -259,25 +266,25 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 
 func createThumbnail(dO model.DownloadObject) error {
 	imgPath := *localDirectory + dO.UserImage
-	poster := pkg.DrawPoster{
-		BG: dO.Background,
-		User: pkg.User{
-			Name:  "@" + dO.UserImage,
-			Image: imgPath + ".jpg",
-			Font:  dO.Font,
-		},
-	}
 
-	err := poster.BuildImage()
-	if err != nil {
-		return err
+	if dO.Background != "" {
+		poster := pkg.DrawPoster{
+			BG: dO.Background,
+			User: pkg.User{
+				Name:  "@" + dO.UserImage,
+				Image: imgPath + ".jpg",
+				Font:  dO.Font,
+			},
+		}
+		err := poster.BuildImage()
+		if err != nil {
+			return err
+		}
+		err = pngToMp4(*localDirectory+poster.User.Name+".png", *localDirectory + dO.UserImage+".mp4")
+		if err != nil {
+			return err
+		}
 	}
-
-	err = pngToMp4(*localDirectory+poster.User.Name+".png", *localDirectory + dO.UserImage+".mp4")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

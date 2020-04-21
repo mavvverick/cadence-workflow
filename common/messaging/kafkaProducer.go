@@ -2,6 +2,11 @@ package messaging
 
 import (
 	"context"
+	"crypto/tls"
+	"github.com/segmentio/kafka-go/sasl/scram"
+	"time"
+
+	"os"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -15,11 +20,26 @@ type KafkaProducer struct {
 func NewProducer(kc *KafkaConfig) *KafkaProducer {
 	kc.Validate()
 
-	brokers := kc.getBrokersForKafkaCluster([]byte(kc.Brokers))
+	brokers := kc.getBrokers(kc.Brokers)
+
+	mechanism, _ := scram.Mechanism(scram.SHA256, os.Getenv("KAFKA_USERNAME"), os.Getenv("KAFKA_PASS"))
+	dialer := &kafka.Dialer {
+		Timeout:   10 * time.Second,
+		SASLMechanism: mechanism,
+		DualStack: true,
+		TLS: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+
 	writer := kafka.NewWriter(
 		kafka.WriterConfig{
 			Brokers: brokers,
+			Dialer:   dialer,
+			Balancer: &kafka.LeastBytes{},
+			Async:    true,
 			Topic:   kc.Topic,
+
 		})
 	return &KafkaProducer{
 		Writer: writer,

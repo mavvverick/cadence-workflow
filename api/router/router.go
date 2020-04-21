@@ -3,8 +3,6 @@ package router
 import (
 	"github.com/YOVO-LABS/workflow/api/dicontainer"
 	"github.com/YOVO-LABS/workflow/config"
-	"github.com/YOVO-LABS/workflow/internal/handler"
-
 	"github.com/go-chi/cors"
 
 	"github.com/go-chi/chi"
@@ -46,17 +44,15 @@ func (h *router) RouteMultiplexer() *chi.Mux {
 
 func (h *router) Routes(container *dicontainer.ServiceContainer) {
 	h.mux.Group(func(r chi.Router) {
-		r.Post("/workflow/cron/create", container.LeaderboardController.CreateCron)
-		r.Post("/workflow/terminate", container.LeaderboardController.TerminateCron)
+		r.Post("/workflow/lb/cron/create", container.LeaderboardController.CreateCron)
+		r.Post("/workflow/job/cron/create", container.JobProcessorController.CreateCron)
+		r.Post("/workflow/cron/terminate", container.LeaderboardController.TerminateCron)
 
 		r.Post("/v1/start_encode2", container.JobProcessorController.CreateJob)
+
 		r.Post("/workflow/job/info", container.JobProcessorController.GetJob)
-		r.Get("/workflow/job/list", container.JobProcessorController.ListJob)
-		// r.Post("/workflow/job/create", container.JobProcessorController.CreateJob)
-		r.Get("/workflow/job/start", handler.StartJobHandler)
-		r.Post("/workflow/job/register", handler.CallbackHandler)
-		r.Get("/workflow/job/action", container.JobProcessorController.ActionHandler)
-		//r.Get("/workflow/job/list", handler.ListHandler)
+		r.Get("/workflow/job/count", container.JobProcessorController.JobStatusCount)
+		r.Get("/workflow/job/logs", container.JobProcessorController.GetLogs)
 	})
 
 	h.mux.NotFound(container.HTTPErrorController.ResourceNotFound)

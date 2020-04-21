@@ -37,6 +37,7 @@ type WorkflowExecution struct {
 	Timeout		int
 	Terminated 	int
 	Total 		int
+	//Pollers		int
 }
 
 // Validate ...

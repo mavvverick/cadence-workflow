@@ -1,9 +1,9 @@
 package messaging
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type (
@@ -28,8 +28,8 @@ func (k *KafkaConfig) Validate() {
 	}
 }
 
-func (k *KafkaConfig) getBrokersForKafkaCluster(brokers []byte) []string {
+func (k *KafkaConfig) getBrokers(brokers string) []string {
 	var kb kafkaBrokers
-	json.Unmarshal(brokers, &kb.ip)
+	kb.ip = strings.Split(brokers, ",")
 	return kb.ip
 }

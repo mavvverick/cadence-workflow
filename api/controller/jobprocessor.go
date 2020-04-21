@@ -59,18 +59,60 @@ func (l *JobProcessorController) GetJob(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (l *JobProcessorController) ListJob(w http.ResponseWriter, r *http.Request) {
+func (l *JobProcessorController) JobStatusCount(w http.ResponseWriter, r *http.Request) {
 
 	duration, ok := r.URL.Query()["duration"]
 	if !ok {
 		l.WriteErrorWithMessage(r, w, nil, "Missing Query Param Duration")
 	}
 
-	exec, err := l.JobProcessorService.ListJob(r.Context(), duration[0])
+	exec, err := l.JobProcessorService.JobStatusCount(r.Context(), duration[0])
 	if err != nil {
 		l.WriteError(r, w, err)
 		return
 	}
 
 	l.WriteJSON(r, w, http.StatusOK, exec)
+}
+
+func (l *JobProcessorController) GetLogs(w http.ResponseWriter, r *http.Request) {
+
+	duration, ok := r.URL.Query()["duration"]
+	if !ok {
+		l.WriteErrorWithMessage(r, w, nil, "Missing Query Param Duration")
+	}
+
+	starttime, ok := r.URL.Query()["starttime"]
+	if !ok {
+		l.WriteErrorWithMessage(r, w, nil, "Missing Query Param Duration")
+	}
+
+	err := l.JobProcessorService.GetLogs(r.Context(), starttime[0], duration[0])
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	l.WriteJSON(r, w, http.StatusOK, "Saved to /tmp/cadence-logs.csv")
+
+}
+
+// CreateCron ...
+func (l *JobProcessorController) CreateCron(w http.ResponseWriter, r *http.Request) {
+	var req model.Cron
+
+	err := l.decodeAndValidate(r, &req)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	cron, err := l.JobProcessorService.CreateCron(r.Context(), req.Time)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	l.WriteJSON(r, w, http.StatusOK, cron)
+
 }

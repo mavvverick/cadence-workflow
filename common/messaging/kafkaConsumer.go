@@ -19,7 +19,7 @@ type KafkaMessage struct {
 //NewConsumer creates consumer object to read message
 func NewConsumer(kc *KafkaConfig) *KafkaConsumer {
 	kc.Validate()
-	brokers := kc.getBrokersForKafkaCluster([]byte(kc.Brokers))
+	brokers := kc.getBrokers(kc.Brokers)
 
 	reader := kafka.NewReader(
 		kafka.ReaderConfig{
