@@ -69,11 +69,7 @@ func createWatermarkCmd(encode model.Encode, dO model.DownloadObject, preset str
 }
 
 func createThumbnailCmd(dO model.DownloadObject, codec, size string) (string, error) {
-	duration, err := getMediaDuration(dO.VideoPath + ".mp4")
-	if err != nil {
-		return "", nil
-	}
-
+	duration := dO.Meta.Duration
 	inputFilePath := dO.VideoPath + "_" + codec + "_" + size + ".mp4"
 	watermarkFilePath := dO.VideoPath + "_" + codec + "_" + size + "_" + "wm" + ".mp4"
 
@@ -91,19 +87,39 @@ func createThumbnailCmd(dO model.DownloadObject, codec, size string) (string, er
 	return thumbnailCmd, nil
 }
 
-func getMediaDuration(fpath string) (float64, error) {
-	durationCmd := "ffprobe -i " + fpath + " -show_format -v quiet"
-	duration, err := executeCommandWithOutput(durationCmd)
+func getMediaMeta(dO *model.DownloadObject) (*model.Meta, error) {
+	probeCmd := "ffprobe -i " + dO.VideoPath + ".mp4" + " -show_format -v quiet"
+	probe, err := executeCommandWithOutput(probeCmd)
 	if err != nil {
-		return -1, err
+		return nil, err
+	}
+	meta := strings.Split(probe, "\n")
+
+	duration := strings.Split(meta[7], "=")[1]
+	durationParsed, err := strconv.ParseFloat(duration, 8)
+	if err != nil {
+		return nil, err
 	}
 
-	duration = strings.Split(strings.Split(duration, "\n")[7], "=")[1]
-	durationInt, err := strconv.ParseFloat(duration, 8)
+	size := strings.Split(meta[8], "=")[1]
+	sizeParsed, err := strconv.ParseFloat(size, 16)
 	if err != nil {
-		return -1, nil
+		return nil, err
 	}
-	return durationInt, nil
+
+	bitrate := strings.Split(meta[9], "=")[1]
+	bitrateParsed, err := strconv.ParseFloat(bitrate, 16)
+	if err != nil {
+		return nil, err
+	}
+
+	dO.Meta = &model.Meta{
+		Duration: durationParsed,
+		Size:     sizeParsed/(1024*1024),
+		Bitrate:  int(bitrateParsed/1000),
+	}
+
+	return dO.Meta, nil
 }
 
 func pngToMp4(ImgPath, mp4Path string) error {

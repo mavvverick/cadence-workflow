@@ -16,6 +16,13 @@ type DownloadObject struct {
 	UserImage 	string
 	Background	string
 	Font		string
+	Meta        *Meta
+}
+
+type Meta struct {
+	Duration float64
+	Size     float64
+	Bitrate  int
 }
 
 type DataRange struct {
