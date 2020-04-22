@@ -204,9 +204,14 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 }
 
 func compressMedia(dO model.DownloadObject, format model.Format) error {
+	_, err := getMediaMeta(&dO)
+	if err != nil {
+		return err
+	}
+
 	encodeCmd264, _, watermarkCmd, thumbnailCmd := createEncodeCommand(dO, format.Encode)
 	//encode 240p video using x264
-	err := executeCommand(encodeCmd264)
+	err = executeCommand(encodeCmd264)
 	if err != nil {
 		return err
 	}
@@ -247,7 +252,9 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 		destFields := strings.Split(encode.Destination, "/")
 		path := destFields[len(destFields)-2]
 		outputPath := dO.VideoPath + "_" + encode.VideoCodec + "_" + encode.Size + "_" + path + ".mp4"
-
+		if encode.BitRate > dO.Meta.Bitrate {
+			encode.BitRate = dO.Meta.Bitrate
+		}
 		if encode.VideoCodec == "libx265" {
 			//encodeCmd265 += x265EncodeCmd(encode, outputPath)
 		} else if encode.VideoCodec == "libx264" {
