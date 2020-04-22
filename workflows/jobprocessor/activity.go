@@ -165,8 +165,8 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 				if err != nil {
 					return nil, err
 				}
-				os.Link(thumbnailBG, *localDirectory + payloadFields[2] + ".mp4")
 			}
+			os.Link(thumbnailBG, *localDirectory + payloadFields[2] + ".mp4")
 			dO.UserImage = payloadFields[2]
 			return &dO, nil
 		} else if err != nil {
