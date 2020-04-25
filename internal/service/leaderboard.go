@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	"github.com/YOVO-LABS/workflow/config"
-	"github.com/YOVO-LABS/workflow/internal/adapter"
 
 	lb "github.com/YOVO-LABS/workflow/workflows/leaderboard"
 
@@ -17,15 +17,10 @@ import (
 	"go.uber.org/zap"
 )
 
-//LeaderboardInterface ...
-type LeaderboardInterface interface {
-	CreateCron(ctx context.Context, cronTime string) (*workflow.Execution, error)
-	TerminateCron(ctx context.Context, wfID string) error
-}
 
 //LeaderboardService ...
 type LeaderboardService struct {
-	CadenceAdapter adapter.CadenceAdapter
+	CadenceAdapter ca.CadenceAdapter
 	Logger         *zap.Logger
 }
 

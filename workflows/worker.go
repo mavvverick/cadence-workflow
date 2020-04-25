@@ -8,18 +8,11 @@ import (
 	"time"
 
 	"github.com/YOVO-LABS/workflow/config"
-	ca "github.com/YOVO-LABS/workflow/internal/adapter"
+	ca "github.com/YOVO-LABS/workflow/common/cadence"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
 )
-
-//WorkerInterface ...
-type WorkerInterface interface {
-	Init(taskList string)
-
-	Start(verbose, workerType string)
-}
 
 //Worker ...
 type Worker struct {
@@ -29,7 +22,7 @@ type Worker struct {
 }
 
 //New ...
-func New(configPath string) WorkerInterface {
+func New(configPath string) *Worker {
 	var appConfig config.AppConfig
 	appConfig.LoadConfig(configPath)
 

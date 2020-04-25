@@ -1,8 +1,7 @@
-package adapter
+package cadence
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	config "github.com/YOVO-LABS/workflow/config"
@@ -40,7 +39,6 @@ func (h *CadenceAdapter) Setup(config *config.CadenceConfig) {
 
 	hostPort := os.Getenv("CADENCE_HOST")
 	domainName := os.Getenv("CADENCE_DOMAIN")
-	fmt.Println(hostPort)
 	h.Builder = NewBuilder(logger, hostPort, domainName)
 
 	// Cadence client used to perform CRUD operation.

@@ -3,9 +3,9 @@ package cron
 import (
 	"context"
 	"encoding/json"
-	"github.com/YOVO-LABS/workflow/api/model"
 	"github.com/YOVO-LABS/workflow/config"
-	"github.com/YOVO-LABS/workflow/internal/adapter"
+	ca "github.com/YOVO-LABS/workflow/common/cadence"
+	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/uber/cadence/common"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const writeWorkflowInfoName  = "pushWorkflowInfo"
+const writeWorkflowInfoName  = "writeWorkflowInfo"
 
 func init() {
 	workflow.Register(Workflow)
@@ -54,16 +54,16 @@ func Workflow(ctx workflow.Context, jobID string) error {
 }
 
 func writeWorkflowInfo(jobID string) error {
-	var workflowInfo model.WorkflowExecution
+	var workflowInfo WorkflowExecution
 	ctx := context.Background()
 
 	var appConfig config.AppConfig
 	appConfig.LoadConfig("./config")
 
-	var cadenceClient adapter.CadenceAdapter
+	var cadenceClient ca.CadenceAdapter
 	cadenceClient.Setup(&appConfig.Cadence)
 
-	var kafkaClient adapter.KafkaAdapter
+	var kafkaClient ka.KafkaAdapter
 	kafkaClient.Setup(&appConfig.Kafka)
 
 	duration :=60

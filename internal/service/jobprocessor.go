@@ -4,18 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	cron "github.com/YOVO-LABS/workflow/workflows/cron"
+	"github.com/YOVO-LABS/workflow/workflows/cron"
 	"github.com/uber/cadence/common"
 	"go.uber.org/cadence/.gen/go/shared"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/YOVO-LABS/workflow/api/model"
-	"github.com/YOVO-LABS/workflow/internal/adapter"
-	"github.com/YOVO-LABS/workflow/internal/handler"
+	ca "github.com/YOVO-LABS/workflow/common/cadence"
+	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
 	"github.com/google/uuid"
@@ -24,52 +23,41 @@ import (
 	"go.uber.org/zap"
 )
 
-//JobProcessorInterface ...
-type JobProcessorInterface interface {
-	CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error)
-	NotifyJobStateChange(w http.ResponseWriter, r *http.Request) error
-	GetJobInfo(ctx context.Context, workflowOption *model.Workflow) (interface{}, error)
-	JobStatusCount(ctx context.Context, m string) (*model.WorkflowExecution, error)
-	GetLogs(ctx context.Context, st, du string) error
-	CreateCron(ctx context.Context, cronTime string) (*workflow.Execution, error)
-}
-
 //JobProcessorService ...
 type JobProcessorService struct {
-	CadenceAdapter adapter.CadenceAdapter
-	KafkaAdapter adapter.KafkaAdapter
+	CadenceAdapter ca.CadenceAdapter
+	KafkaAdapter ka.KafkaAdapter
 	Logger         *zap.Logger
 }
 
 // CreateJob ...
 func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.QueryParams) (*workflow.Execution, error) {
-	var encodes []model.Encode
-	videoFormat := model.NewVideoFormat()
+	var encodes []jp.Encode
+	var videoFormat jp.Format
 
 	query := queryParams.Query
 	for _, format := range query.Format {
-		mp4EncodeParams := model.NewMP4Encode()
-		mp4EncodeParams.
-			SetDestination(format.Destination.URL).
-			SetSize(format.Size).
-			SetVideoCodec(format.VideoCodec).
-			SetFrameRate(format.Framerate).
-			SetBitRate(format.Bitrate).
-			SetBufferSize(format.Bitrate).
-			SetMaxRate(format.Bitrate).
-			SetVideoFormat(format.FileExtension)
-		if (model.Logo{}) != format.Logo {
-			mp4EncodeParams.SetWatermarkURL(format.Logo.Source)
-			videoFormat.SetFormatWatermarkURL(format.Logo.Source)
+		var encode jp.Encode
+		encode.Destination=format.Destination.URL
+		encode.Size=format.Size
+		encode.VideoCodec=format.VideoCodec
+		encode.FrameRate=format.Framerate
+		encode.BitRate=format.Bitrate
+		encode.BufferSize=format.Bitrate
+		encode.MaxRate=format.Bitrate
+		encode.VideoFormat=format.FileExtension
+
+		if (jp.Logo{}) != format.Logo {
+			encode.Logo.Source=format.Logo.Source
+			videoFormat.WatermarkURL=format.Logo.Source
 		}
-		encodes = append(encodes, mp4EncodeParams.GetEncode())
+		encodes = append(encodes, encode)
 	}
 
-	videoFormat.
-		SetFormatSource(query.Source).
-		SetFormatCallbackURL(query.CallbackURL).
-		SetFormatPayload(query.Payload).
-		SetFormatEncode(encodes)
+	videoFormat.Source=query.Source
+	videoFormat.CallbackURL=query.CallbackURL
+	videoFormat.Payload=query.Payload
+	videoFormat.Encode=encodes
 
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                              "jobProcessing_" + uuid.New().String(),
@@ -83,61 +71,9 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.
 		workflowOptions,
 		jp.Workflow,
 		uuid.New().String(),
-		videoFormat.GetFormat(),
+		videoFormat,
 	)
 	return execution, err
-}
-
-// NotifyJobStateChange ...
-func (b *JobProcessorService) NotifyJobStateChange(w http.ResponseWriter, r *http.Request) error {
-	isAPICall := r.URL.Query().Get("is_api_call") == "true"
-	id := r.URL.Query().Get("id")
-	actionType := r.URL.Query().Get("type")
-
-	allExpense := handler.AllExpense
-	oldState, ok := allExpense[id]
-	if !ok {
-		fmt.Println("ERROR:INVALID_ID")
-		return nil
-	}
-
-	const (
-		created   = "CREATED"
-		approved  = "APPROVED"
-		rejected  = "REJECTED"
-		completed = "COMPLETED"
-	)
-
-	switch actionType {
-	case "approve":
-		allExpense[id] = approved
-	case "reject":
-		allExpense[id] = rejected
-	case "processed":
-		allExpense[id] = completed
-	}
-	if isAPICall {
-		fmt.Fprint(w, "SUCCEED")
-	} else {
-		handler.ListHandler(w, r)
-	}
-
-	if oldState == created && (allExpense[id] == approved || allExpense[id] == rejected) {
-		token, ok := handler.TokenMap[id]
-		if !ok {
-			fmt.Printf("Invalid id:%s\n", id)
-			return nil
-		}
-		err := b.CadenceAdapter.CadenceClient.CompleteActivity(context.Background(), token, string(allExpense[id]), nil)
-		if err != nil {
-			fmt.Printf("Failed to complete activity with error: %+v\n", err)
-		} else {
-			fmt.Printf("Successfully complete activity: %s\n", token)
-		}
-	}
-	fmt.Printf("Set state for %s from %s to %s.\n", id, oldState, allExpense[id])
-	return nil
-	// report state change
 }
 
 // GetJobInfo ...
@@ -199,7 +135,7 @@ func (b *JobProcessorService) JobStatusCount(ctx context.Context, d string) (*mo
 	}
 
 	requestOpenWorkflow := &shared.ListOpenWorkflowExecutionsRequest{
-		MaximumPageSize: common.Int32Ptr(int32(3)),
+		MaximumPageSize: common.Int32Ptr(int32(10000)),
 		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(time.Now().Add(time.Duration(-duration)*time.Minute).UnixNano()),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -222,21 +158,6 @@ func (b *JobProcessorService) JobStatusCount(ctx context.Context, d string) (*mo
 		}
 	}
 
-	//taskListResponse, err := b.CadenceAdapter.CadenceClient.DescribeTaskList(ctx, jp.TaskList, shared.TaskListTypeActivity)
-	//workflowInfo.Pollers = len(taskListResponse.Pollers)
-
-	//push message to kafka
-	//kafkaMsg, err := json.Marshal(&workflowInfo)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//if kafkaMsg != nil {
-	//	err = b.KafkaAdapter.Producer.Publish(ctx, "video", string(kafkaMsg))
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//}
 	return &workflowInfo, nil
 }
 
@@ -283,7 +204,7 @@ func (b *JobProcessorService) GetLogs(ctx context.Context, st, du string) error 
 	}
 
 	requestOpenWorkflow := &shared.ListOpenWorkflowExecutionsRequest{
-		MaximumPageSize: common.Int32Ptr(int32(3)),
+		MaximumPageSize: common.Int32Ptr(int32(10000)),
 		StartTimeFilter: &shared.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(starttime.Add(time.Duration(-duration)*time.Minute).UnixNano()),
 			LatestTime:   common.Int64Ptr(starttime.UnixNano()),

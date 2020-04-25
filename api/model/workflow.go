@@ -10,15 +10,6 @@ type Workflow struct {
 	RunID string `json:"rid,omitempty"`
 }
 
-type DownloadObject struct {
-	VideoPath	string
-	Watermark 	string
-	UserImage 	string
-	Background	string
-	Font		string
-	Meta        *Meta
-}
-
 type Meta struct {
 	Duration float64
 	Size     float64

@@ -2,8 +2,9 @@ package dicontainer
 
 import (
 	"github.com/YOVO-LABS/workflow/api/controller"
+	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	"github.com/YOVO-LABS/workflow/config"
-	"github.com/YOVO-LABS/workflow/internal/adapter"
+	//ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/YOVO-LABS/workflow/internal/service"
 )
 
@@ -30,10 +31,10 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 	baseController := controller.BaseController{Config: container.config}
 
 	//Initializing Clients
-	var cadenceClient adapter.CadenceAdapter
+	var cadenceClient ca.CadenceAdapter
 	cadenceClient.Setup(&container.config.Cadence)
 
-	//var kafkaClient adapter.KafkaAdapter
+	//var kafkaClient ka.KafkaAdapter
 	//kafkaClient.Setup(&container.config.Kafka)
 
 	//Services

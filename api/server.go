@@ -1,30 +1,21 @@
-package server
+package api
 
 import (
 	"github.com/YOVO-LABS/workflow/api/dicontainer"
 	"github.com/YOVO-LABS/workflow/api/router"
-	config "github.com/YOVO-LABS/workflow/config"
-
+	"github.com/YOVO-LABS/workflow/config"
 	"net/http"
 )
-
-//AppInterface ...
-type AppInterface interface {
-	Init()
-
-	Start(serverPort string) error
-}
 
 //Application ...
 type Application struct {
 	config config.AppConfig
-
 	serviceContainer *dicontainer.ServiceContainer
 	router           router.RoutingInterface
 }
 
 //New ...
-func New(configPath string) AppInterface {
+func New(configPath string) *Application {
 	var appConfig config.AppConfig
 	appConfig.LoadConfig(configPath)
 

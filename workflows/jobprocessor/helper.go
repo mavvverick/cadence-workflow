@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/YOVO-LABS/workflow/api/model"
 )
 
 var overlayWatermark = "[1:v]scale=%v:%v[v1];[0:v][v1]overlay='mod(trunc((t+0)/5),2)*(W-w-0)':" +
@@ -26,7 +25,7 @@ var overlayThumbnail = "color=black:%v:d=%v[base];[0:v]setpts=PTS-STARTPTS[v0];"
 	"[tmp][v1]overlay,format=yuv420p[fv];" +
 	"[0:a]afade=out:st=%v:d=1"
 
-func createWatermarkCmd(encode model.Encode, dO model.DownloadObject, preset string) string {
+func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string {
 	destFields := strings.Split(encode.Destination, "/")
 	path := destFields[len(destFields)-2]
 
@@ -68,7 +67,7 @@ func createWatermarkCmd(encode model.Encode, dO model.DownloadObject, preset str
 	return watermarkCmd
 }
 
-func createThumbnailCmd(dO model.DownloadObject, codec, size string) (string, error) {
+func createThumbnailCmd(dO DownloadObject, codec, size string) (string, error) {
 	duration := dO.Meta.Duration
 	inputFilePath := dO.VideoPath + "_" + codec + "_" + size + ".mp4"
 	watermarkFilePath := dO.VideoPath + "_" + codec + "_" + size + "_" + "wm" + ".mp4"
@@ -87,7 +86,7 @@ func createThumbnailCmd(dO model.DownloadObject, codec, size string) (string, er
 	return thumbnailCmd, nil
 }
 
-func getMediaMeta(dO *model.DownloadObject) (*model.Meta, error) {
+func getMediaMeta(dO *DownloadObject) (*Meta, error) {
 	probeCmd := "ffprobe -i " + dO.VideoPath + ".mp4" + " -show_format -v quiet"
 	probe, err := executeCommandWithOutput(probeCmd)
 	if err != nil {
@@ -113,7 +112,7 @@ func getMediaMeta(dO *model.DownloadObject) (*model.Meta, error) {
 		return nil, err
 	}
 
-	dO.Meta = &model.Meta{
+	dO.Meta = &Meta{
 		Duration: durationParsed,
 		Size:     sizeParsed/(1024*1024),
 		Bitrate:  int(bitrateParsed/1000),
@@ -170,7 +169,7 @@ func executeCommandWithOutput(execCmd string) (string, error) {
 	return outStr, nil
 }
 
-func x265EncodeCmd(encode model.Encode, outputPath string) string {
+func x265EncodeCmd(encode Encode, outputPath string) string {
 	bitrate := strconv.Itoa(encode.BitRate) + "k"
 	x265Cmd :=
 		" -pix_fmt " + "yuv420p" +
@@ -191,7 +190,7 @@ func x265EncodeCmd(encode model.Encode, outputPath string) string {
 	return x265Cmd
 }
 
-func x264EncodeCmd(encode model.Encode, outputPath string) string {
+func x264EncodeCmd(encode Encode, outputPath string) string {
 	bitrate := strconv.Itoa(encode.BitRate) + "k"
 	x264Cmd :=
 		" -pix_fmt " + "yuv420p" +

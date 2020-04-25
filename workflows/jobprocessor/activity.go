@@ -8,9 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YOVO-LABS/workflow/pkg"
-
-	"github.com/YOVO-LABS/workflow/api/model"
 	"google.golang.org/api/option"
 
 	"cloud.google.com/go/storage"
@@ -54,7 +51,7 @@ func init() {
 	)
 }
 
-func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark string) (*model.DownloadObject, error) {
+func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark string) (*DownloadObject, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Downloading file from gcs", zap.String("jobID", jobID))
 
@@ -71,7 +68,7 @@ func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark st
 	return dO, nil
 }
 
-func compressMediaActivity(ctx context.Context, jobID string, dO model.DownloadObject, format model.Format) error {
+func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject, format Format) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("compressFileActivity started.", zap.String("jobID", jobID))
 
@@ -88,7 +85,7 @@ func compressMediaActivity(ctx context.Context, jobID string, dO model.DownloadO
 	return nil
 }
 
-func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.Format) error {
+func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("uploadFileActivity begin", zap.String("jobID", jobID))
 
@@ -105,8 +102,8 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format model.F
 }
 
 // get video, watermark, user info required for compression
-func downloadResources(ctx context.Context, url, payload, watermarkURL string) (*model.DownloadObject, error) {
-	var dO model.DownloadObject
+func downloadResources(ctx context.Context, url, payload, watermarkURL string) (*DownloadObject, error) {
+	var dO DownloadObject
 
 	bucket := strings.Split(strings.Split(url, "//")[1], ".")[0]
 	objectPath := strings.Split(url, ".com/")[1]
@@ -203,7 +200,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	return &dO, nil
 }
 
-func compressMedia(dO model.DownloadObject, format model.Format) error {
+func compressMedia(dO DownloadObject, format Format) error {
 	_, err := getMediaMeta(&dO)
 	if err != nil {
 		return err
@@ -244,7 +241,7 @@ func compressMedia(dO model.DownloadObject, format model.Format) error {
 	return nil
 }
 
-func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encodeCmd264, encodeCmd265 string, watermarkCmd, thumbnailCmd []string) {
+func createEncodeCommand(dO DownloadObject, encodes []Encode) (encodeCmd264, encodeCmd265 string, watermarkCmd, thumbnailCmd []string) {
 	encodeCmd264 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
 	encodeCmd265 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
 
@@ -260,7 +257,7 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 		} else if encode.VideoCodec == "libx264" {
 			encodeCmd264 += x264EncodeCmd(encode, outputPath)
 		}
-		if (model.Logo{}) != encode.Logo {
+		if (Logo{}) != encode.Logo {
 			watermarkCmd = append(watermarkCmd, createWatermarkCmd(encode, dO, "veryfast"))
 			tc, err := createThumbnailCmd(dO, encode.VideoCodec, encode.Size)
 			if err == nil {
@@ -271,13 +268,13 @@ func createEncodeCommand(dO model.DownloadObject, encodes []model.Encode) (encod
 	return
 }
 
-func createThumbnail(dO model.DownloadObject) error {
+func createThumbnail(dO DownloadObject) error {
 	imgPath := *localDirectory + dO.UserImage
 
 	if dO.Background != "" {
-		poster := pkg.DrawPoster{
+		poster := DrawPoster{
 			BG: dO.Background,
-			User: pkg.User{
+			User: User{
 				Name:  "@" + dO.UserImage,
 				Image: imgPath + ".jpg",
 				Font:  dO.Font,
@@ -295,7 +292,7 @@ func createThumbnail(dO model.DownloadObject) error {
 	return nil
 }
 
-func uploadFile(fpath string, format model.Format) error {
+func uploadFile(fpath string, format Format) error {
 	ctx := context.Background()
 	storageClient, err := storage.NewClient(ctx,
 		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
@@ -314,7 +311,7 @@ func uploadFile(fpath string, format model.Format) error {
 		if err != nil {
 			return err
 		}
-		if (model.Logo{}) != encode.Logo {
+		if (Logo{}) != encode.Logo {
 			filepath = fpath + "_" + encode.VideoCodec + "_" + encode.Size + ".mp4"
 			gcsPathField := strings.Split(object, "/"+pathArr[len(pathArr)-2])
 			object = gcsPathField[0] + gcsPathField[1]
@@ -331,7 +328,7 @@ func uploadFile(fpath string, format model.Format) error {
 	return nil
 }
 
-func migrateToColdline(ctx context.Context, jobID string, format model.Format) error {
+func migrateToColdline(ctx context.Context, jobID string, format Format) error {
 	gsContext := context.Background()
 
 	gsContext, cancel := context.WithTimeout(gsContext, time.Minute*10)

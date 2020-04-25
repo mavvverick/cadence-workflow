@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	server "github.com/YOVO-LABS/workflow/cmd/server"
-	worker "github.com/YOVO-LABS/workflow/cmd/worker"
+	server "github.com/YOVO-LABS/workflow/api"
+	worker "github.com/YOVO-LABS/workflow/workflows"
 	_ "github.com/joho/godotenv/autoload"
 )
 

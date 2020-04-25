@@ -3,8 +3,6 @@ package jobprocessor
 import (
 	"time"
 
-	"github.com/YOVO-LABS/workflow/api/model"
-	"github.com/YOVO-LABS/workflow/internal/handler"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
@@ -29,9 +27,9 @@ func init() {
 }
 
 // Workflow Session Based to perform download, compression and upload
-func Workflow(ctx workflow.Context, jobID string, format model.Format) error {
+func Workflow(ctx workflow.Context, jobID string, format Format) error {
 
-	cb := handler.NewCallbackInfo(&format)
+	cb := NewCallbackInfo(&format)
 	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
 
 	ao := workflow.ActivityOptions{
@@ -64,13 +62,13 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) error {
 	}
 	defer workflow.CompleteSession(ctx)
 
-	var dO model.DownloadObject
+	var dO DownloadObject
 
 	err = workflow.ExecuteActivity(ctx, downloadFileActivity,
 		jobID, format.Source, format.Payload, format.WatermarkURL).Get(ctx, &dO)
 	if err != nil {
 		logger.Error(DownloadActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Download, Task, jobID, CallbackErrorEvent, format.Encode)
+		cb.PushMessage(Download, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), DownloadActivityErrorMsg)
 	}
 
@@ -78,7 +76,7 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) error {
 		jobID, dO, format).Get(ctx, nil)
 	if err != nil {
 		logger.Error(CompressionActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Compression, Task, jobID, CallbackErrorEvent, format.Encode)
+		cb.PushMessage(Compression, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), CompressionActivityErrorMsg)
 	}
 
@@ -86,10 +84,10 @@ func Workflow(ctx workflow.Context, jobID string, format model.Format) error {
 		jobID, dO.VideoPath, format).Get(ctx, nil)
 	if err != nil {
 		logger.Error(UploadActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Upload, Task, jobID, CallbackErrorEvent, format.Encode)
+		cb.PushMessage(Upload, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), UploadActivityErrorMsg)
 	}
 
-	cb.PushMessage(Completed, Task, jobID, "saved", format.Encode)
+	cb.PushMessage(Completed, Task, jobID, "saved")
 	return nil
 }

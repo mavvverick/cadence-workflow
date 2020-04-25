@@ -1,12 +1,10 @@
-package handler
+package jobprocessor
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/YOVO-LABS/workflow/api/model"
 )
 
 //CallbackInfo ...
@@ -20,7 +18,7 @@ type CallbackInfo struct {
 }
 
 //NewCallbackInfo ...
-func NewCallbackInfo(format *model.Format) *CallbackInfo {
+func NewCallbackInfo(format *Format) *CallbackInfo {
 	return &CallbackInfo{
 		URL:     format.CallbackURL,
 		Payload: format.Payload,
@@ -38,7 +36,7 @@ type webhookMessage struct {
 }
 
 //PushMessage ...
-func (e *CallbackInfo) PushMessage(status, callbackType, token, event string, format []model.Encode) {
+func (e *CallbackInfo) PushMessage(status, callbackType, token, event string) {
 	requestBody := &webhookMessage{
 		Status:       fmt.Sprintf(`{"status":"%v"}`, status),
 		CallbackType: callbackType,

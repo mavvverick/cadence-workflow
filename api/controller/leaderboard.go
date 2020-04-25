@@ -10,7 +10,7 @@ import (
 // LeaderboardController ...
 type LeaderboardController struct {
 	BaseController
-	LeaderboardService service.LeaderboardInterface
+	LeaderboardService *service.LeaderboardService
 }
 
 // CreateCron ...

@@ -10,7 +10,7 @@ import (
 // JobProcessorController ...
 type JobProcessorController struct {
 	BaseController
-	JobProcessorService service.JobProcessorInterface
+	JobProcessorService *service.JobProcessorService
 }
 
 // CreateJob ...
@@ -32,12 +32,6 @@ func (l *JobProcessorController) CreateJob(w http.ResponseWriter, r *http.Reques
 	l.WriteJSON(r, w, http.StatusOK, exec.ID)
 }
 
-//ActionHandler ....
-func (l *JobProcessorController) ActionHandler(w http.ResponseWriter, r *http.Request) {
-	_ = l.JobProcessorService.NotifyJobStateChange(w, r)
-	// l.WriteJSON(r, w, http.StatusOK, nil)
-
-}
 
 // GetJob ...
 func (l *JobProcessorController) GetJob(w http.ResponseWriter, r *http.Request) {
