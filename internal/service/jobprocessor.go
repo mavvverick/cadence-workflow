@@ -15,6 +15,7 @@ import (
 	"github.com/YOVO-LABS/workflow/api/model"
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
+	"github.com/YOVO-LABS/workflow/common/mysql"
 	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
 	"github.com/google/uuid"
@@ -27,7 +28,8 @@ import (
 type JobProcessorService struct {
 	CadenceAdapter ca.CadenceAdapter
 	KafkaAdapter ka.KafkaAdapter
-	Logger         *zap.Logger
+	DB 	mysql.DB
+	Logger *zap.Logger
 }
 
 // CreateJob ...
@@ -259,5 +261,26 @@ func (l *JobProcessorService) CreateCron(ctx context.Context, cronTime string) (
 		return nil, err
 	}
 	return execution, nil
+}
+
+func (l *JobProcessorService) GetData(ctx context.Context, dateRange *model.DataRange) (*[]interface{}, error) {
+	var result []interface{}
+	rows, err := l.DB.Client.
+		Table("job_infos").
+		Select("type as Type, size as Size, sum(cost) as Cost, cast(created_at as char) as Date").
+		Group("created_at, type, size").
+		Where("created_at BETWEEN ? AND ?", &dateRange.Starttime, &dateRange.Endtime).
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+	//var res *model.JobData
+
+	for rows.Next() {
+		var d model.JobData
+		rows.Scan(&d.Type, &d.Size, &d.Cost, &d.Date)
+		result = append(result, d)
+	}
+	return &result, nil
 }
 

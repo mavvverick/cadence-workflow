@@ -110,3 +110,23 @@ func (l *JobProcessorController) CreateCron(w http.ResponseWriter, r *http.Reque
 	l.WriteJSON(r, w, http.StatusOK, cron)
 
 }
+
+// CreateCron ...
+func (l *JobProcessorController) GetData(w http.ResponseWriter, r *http.Request) {
+	var req model.DataRange
+
+	err := l.decodeAndValidate(r, &req)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	cron, err := l.JobProcessorService.GetData(r.Context(), &req)
+	if err != nil {
+		l.WriteError(r, w, err)
+		return
+	}
+
+	l.WriteJSON(r, w, http.StatusOK, cron)
+
+}

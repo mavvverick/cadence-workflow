@@ -17,8 +17,8 @@ type Meta struct {
 }
 
 type DataRange struct {
-	Starttime 	int64	`json:"starttime,omitempty"`
-	Endtime		int64	`json:"endtime,omitempty"`
+	Starttime 	string	`json:"starttime,omitempty"`
+	Endtime		string	`json:"endtime,omitempty"`
 	Duration	int64	`json:"duration,omitempty"`
 }
 
@@ -36,6 +36,13 @@ type WorkflowExecution struct {
 	Terminated 	int
 	Total 		int
 	//Pollers		int
+}
+
+type JobData struct {
+	Type  string
+	Size  string
+	Cost  int64
+	Date  string
 }
 
 // Validate ...

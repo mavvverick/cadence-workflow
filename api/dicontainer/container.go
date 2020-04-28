@@ -5,6 +5,7 @@ import (
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	"github.com/YOVO-LABS/workflow/config"
 	//ka "github.com/YOVO-LABS/workflow/common/messaging"
+	db "github.com/YOVO-LABS/workflow/common/mysql"
 	"github.com/YOVO-LABS/workflow/internal/service"
 )
 
@@ -34,6 +35,9 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 	var cadenceClient ca.CadenceAdapter
 	cadenceClient.Setup(&container.config.Cadence)
 
+	var mysqlClient db.DB
+	mysqlClient.ConnectSQL()
+
 	//var kafkaClient ka.KafkaAdapter
 	//kafkaClient.Setup(&container.config.Kafka)
 
@@ -42,6 +46,7 @@ func (container *ServiceContainer) InitDependenciesInjection() {
 	jobprocessorService := &service.JobProcessorService{
 		CadenceAdapter: cadenceClient,
 		//KafkaAdapter: kafkaClient,
+		DB: mysqlClient,
 		Logger: container.config.Logger,
 	}
 

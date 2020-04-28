@@ -53,6 +53,8 @@ func (h *router) Routes(container *dicontainer.ServiceContainer) {
 		r.Post("/workflow/job/info", container.JobProcessorController.GetJob)
 		r.Get("/workflow/job/count", container.JobProcessorController.JobStatusCount)
 		r.Get("/workflow/job/logs", container.JobProcessorController.GetLogs)
+
+		r.Get("/workflow/job/data", container.JobProcessorController.GetData)
 	})
 
 	h.mux.NotFound(container.HTTPErrorController.ResourceNotFound)
