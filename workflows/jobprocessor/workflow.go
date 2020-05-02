@@ -1,6 +1,7 @@
 package jobprocessor
 
 import (
+	"github.com/YOVO-LABS/workflow/workflows/ai"
 	"time"
 
 	"go.uber.org/cadence"
@@ -10,6 +11,7 @@ import (
 
 const (
 	TaskList                    = "JobProcessor"
+	ChildWorkflowExecErrMsg		= "Child Workflow execution failed"
 	SessionCreationErrorMsg     = "Session Creation Failed"
 	DownloadActivityErrorMsg    = "Failed Download Activity"
 	CompressionActivityErrorMsg = "Failed Compression Activity"
@@ -23,14 +25,32 @@ const (
 )
 
 func init() {
-	workflow.Register(Workflow)
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name:TaskList})
+	//workflow.RegisterWithOptions(ai.Workflow, workflow.RegisterOptions{Name:ai.Tasklist})
 }
 
 // Workflow Session Based to perform download, compression and upload
 func Workflow(ctx workflow.Context, jobID string, format Format) error {
-
+	logger := workflow.GetLogger(ctx)
 	cb := NewCallbackInfo(&format)
-	jobID = workflow.GetInfo(ctx).WorkflowExecution.ID
+	exec := workflow.GetInfo(ctx).WorkflowExecution
+
+	jobID = exec.ID
+	runID := exec.RunID
+
+	cwo := workflow.ChildWorkflowOptions{
+		WorkflowID:                     runID,
+		TaskList:                       ai.Tasklist,
+		ExecutionStartToCloseTimeout:   time.Hour * 24,
+		TaskStartToCloseTimeout:        time.Minute * 24,
+	}
+	ctx = workflow.WithChildOptions(ctx, cwo)
+	err := workflow.ExecuteChildWorkflow(ctx, ai.Workflow,
+		runID, format.Source).Get(ctx, nil)
+	if err != nil {
+		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
+		return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
+	}
 
 	ao := workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
@@ -47,7 +67,7 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 		},
 	}
 	jobCtx := workflow.WithActivityOptions(ctx, ao)
-	logger := workflow.GetLogger(jobCtx)
+
 
 	so := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
@@ -55,7 +75,7 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 		HeartbeatTimeout: time.Minute * 3,
 	}
 
-	ctx, err := workflow.CreateSession(jobCtx, so)
+	ctx, err = workflow.CreateSession(jobCtx, so)
 	if err != nil {
 		logger.Error(SessionCreationErrorMsg, zap.Error(err))
 		return cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)

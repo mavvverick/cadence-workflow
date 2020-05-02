@@ -19,7 +19,7 @@ import (
 const writeWorkflowInfoName  = "writeWorkflowInfo"
 
 func init() {
-	workflow.Register(Workflow)
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name:"Cron Scaler"})
 
 	activity.RegisterWithOptions(
 		writeWorkflowInfo,

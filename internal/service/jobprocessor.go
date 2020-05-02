@@ -71,7 +71,7 @@ func (b *JobProcessorService) CreateJob(ctx context.Context, queryParams *model.
 	execution, err := b.CadenceAdapter.CadenceClient.StartWorkflow(
 		context.Background(),
 		workflowOptions,
-		jp.Workflow,
+		jp.TaskList,
 		uuid.New().String(),
 		videoFormat,
 	)
