@@ -1,14 +1,17 @@
 package worker
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/YOVO-LABS/workflow/config"
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
+	"github.com/YOVO-LABS/workflow/config"
+	"github.com/YOVO-LABS/workflow/internal/service"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -52,11 +55,20 @@ func (w *Worker) Start(verbose, workerType string) {
 	}
 
 	if workerType == "activity" {
+		//https://stackoverflow.com/questions/58170960/cadence-workflow-pass-host-specific-objects-like-database-connections-service/58170961#58170961
+		mlClientConn, err := service.PredictgRPCConnection()
+		if err != nil {
+			fmt.Println("Error ml client ", err)
+		}
+		myContext := context.WithValue(context.Background(), "mlClient", mlClientConn)
+		workerOptions.BackgroundActivityContext = myContext
+
 		workerOptions.EnableSessionWorker = true
 		workerOptions.DisableWorkflowWorker = true
 		workerOptions.DisableActivityWorker = false
 		workerOptions.MaxConcurrentSessionExecutionSize = 1
 		workerOptions.WorkerStopTimeout = time.Second * 10
+
 	} else if workerType == "workflow" {
 		workerOptions.EnableSessionWorker = false
 		workerOptions.DisableWorkflowWorker = false

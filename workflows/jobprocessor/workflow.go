@@ -1,8 +1,9 @@
 package jobprocessor
 
 import (
-	"github.com/YOVO-LABS/workflow/workflows/ai"
 	"time"
+
+	"github.com/YOVO-LABS/workflow/workflows/ai"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
@@ -11,7 +12,7 @@ import (
 
 const (
 	TaskList                    = "JobProcessor"
-	ChildWorkflowExecErrMsg		= "Child Workflow execution failed"
+	ChildWorkflowExecErrMsg     = "Child Workflow execution failed"
 	SessionCreationErrorMsg     = "Session Creation Failed"
 	DownloadActivityErrorMsg    = "Failed Download Activity"
 	CompressionActivityErrorMsg = "Failed Compression Activity"
@@ -25,7 +26,7 @@ const (
 )
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name:TaskList})
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: TaskList})
 	//workflow.RegisterWithOptions(ai.Workflow, workflow.RegisterOptions{Name:ai.Tasklist})
 }
 
@@ -39,14 +40,14 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	runID := exec.RunID
 
 	cwo := workflow.ChildWorkflowOptions{
-		WorkflowID:                     runID,
-		TaskList:                       ai.Tasklist,
-		ExecutionStartToCloseTimeout:   time.Hour * 24,
-		TaskStartToCloseTimeout:        time.Minute * 24,
+		WorkflowID:                   runID,
+		TaskList:                     ai.Tasklist,
+		ExecutionStartToCloseTimeout: time.Hour * 24,
+		TaskStartToCloseTimeout:      time.Minute * 24,
 	}
 	ctx = workflow.WithChildOptions(ctx, cwo)
 	err := workflow.ExecuteChildWorkflow(ctx, ai.Workflow,
-		runID, format.Source).Get(ctx, nil)
+		runID, format.Payload).Get(ctx, nil)
 	if err != nil {
 		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
 		return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
@@ -67,7 +68,6 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 		},
 	}
 	jobCtx := workflow.WithActivityOptions(ctx, ao)
-
 
 	so := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,

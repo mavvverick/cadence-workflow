@@ -14,5 +14,5 @@ message ImageData {
 message Response {
     string message = 1;
     string error = 2;
-    bool next = 3;
+    bool isNext = 3;
 }

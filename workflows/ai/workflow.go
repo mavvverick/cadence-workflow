@@ -1,25 +1,27 @@
 package ai
 
 import (
+	"strings"
+	"time"
+
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
-	"time"
 )
 
 const (
-	Tasklist = "AI"
-	SessionCreationErrorMsg     = "Session Creation Failed"
-	CheckNSFWActivityErrorMsg   = "Failed CheckNSFW Activity"
+	Tasklist                         = "AI"
+	SessionCreationErrorMsg          = "Session Creation Failed"
+	CheckNSFWActivityErrorMsg        = "Failed CheckNSFW Activity"
 	CorrectWatermarkActivityErrorMsg = "Failed Correct Watermark Activity"
 )
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name:Tasklist})
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: Tasklist})
 }
 
 // Workflow Session Based to perform nsfw check and watermark correction
-func Workflow(ctx workflow.Context, jobID string, url string) error {
+func Workflow(ctx workflow.Context, jobID string, payload string) error {
 	logger := workflow.GetLogger(ctx)
 	//cb := jobprocessor.NewCallbackInfo(&format)
 	exec := workflow.GetInfo(ctx).WorkflowExecution
@@ -42,7 +44,6 @@ func Workflow(ctx workflow.Context, jobID string, url string) error {
 	}
 	jobCtx := workflow.WithActivityOptions(ctx, ao)
 
-
 	so := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
 		ExecutionTimeout: time.Minute * 5,
@@ -56,20 +57,13 @@ func Workflow(ctx workflow.Context, jobID string, url string) error {
 	}
 	defer workflow.CompleteSession(ctx)
 
-	err = workflow.ExecuteActivity(ctx, checkNSFWActivity,
-		jobID, url).Get(ctx, nil)
+	postID := strings.Split(payload, "|")[0]
+	err = workflow.ExecuteActivity(ctx, checkNSFWAndLogoActivity,
+		jobID, postID).Get(ctx, nil)
 	if err != nil {
 		logger.Error(CheckNSFWActivityErrorMsg, zap.Error(err))
 		//cb.PushMessage(NSFW, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), CheckNSFWActivityErrorMsg)
-	}
-
-	err = workflow.ExecuteActivity(ctx, correctWatermarkActivity,
-		jobID, url).Get(ctx, nil)
-	if err != nil {
-		logger.Error(CorrectWatermarkActivityErrorMsg, zap.Error(err))
-		//cb.PushMessage(Watermark, Task, jobID, CallbackErrorEvent)
-		return cadence.NewCustomError(err.Error(), CorrectWatermarkActivityErrorMsg)
 	}
 
 	//cb.PushMessage(Completed, Task, jobID, "saved")
