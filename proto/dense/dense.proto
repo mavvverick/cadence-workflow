@@ -1,0 +1,18 @@
+syntax = "proto3";
+package dense;
+
+service Predict {
+    rpc predict_nsfw(ImageData) returns (Response){}
+    rpc predict_logo(ImageData) returns (Response){}
+    rpc predict_pipeline(ImageData) returns (Response){}
+}
+
+message ImageData {
+    string postId = 1;
+}
+
+message Response {
+    string message = 1;
+    string error = 2;
+    bool next = 3;
+}
