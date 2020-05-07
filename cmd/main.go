@@ -2,11 +2,18 @@ package main
 
 import (
 	"flag"
+	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 	"os"
+	"strings"
 
 	server "github.com/YOVO-LABS/workflow/api"
-	worker "github.com/YOVO-LABS/workflow/workflows"
+	"github.com/YOVO-LABS/workflow/workflows/ai"
 	_ "github.com/joho/godotenv/autoload"
+)
+
+const (
+	workflow = "workflow"
+	activity = "activity"
 )
 
 func main() {
@@ -15,8 +22,8 @@ func main() {
 	var serverPort string
 	var tasklist string
 	var logger string
-	flag.StringVar(&service, "service", "", "Name of the service to start (app server or workflow workerworker)")
-	flag.StringVar(&configFilePath, "config", "./config", "absolute path to the configuration file")
+	flag.StringVar(&service, "service", "", "Name of the service to start")
+	flag.StringVar(&configFilePath, "config", "./config", "path to the configuration file")
 	flag.StringVar(&serverPort, "port", "4000", "port on which server runs")
 	flag.StringVar(&tasklist, "tasklist", "", "Name of the tasklist")
 	flag.StringVar(&logger, "v", "0", "Logger enable/disable")
@@ -36,17 +43,29 @@ func main() {
 
 	if service == "app" || os.Getenv("SERVICE") == "app" {
 		application := server.New(configFilePath)
-		// init necessary module before start
 		application.Init()
-		// start http server
 		application.Start(serverPort)
-	} else if service == "workflow" || os.Getenv("SERVICE") == "workflow" {
-		worker := worker.New(configFilePath)
-		worker.Init(tasklist)
-		worker.Start(logger, service)
-	} else if service == "activity" || os.Getenv("SERVICE") == "activity" {
-		worker := worker.New(configFilePath)
-		worker.Init(tasklist)
-		worker.Start(logger, service)
+	} else {
+		if strings.ToLower(tasklist) == strings.ToLower(jp.TaskList) {
+			if service == workflow || os.Getenv("SERVICE") == workflow {
+				worker := jp.New(configFilePath)
+				worker.Init(tasklist, logger, service)
+				worker.Start()
+			} else if service == activity || os.Getenv("SERVICE") == activity {
+				worker := jp.New(configFilePath)
+				worker.Init(tasklist, logger, service)
+				worker.Start()
+			}
+		}  else if strings.ToLower(tasklist) == strings.ToLower(ai.Tasklist) {
+			if service == workflow || os.Getenv("SERVICE") == workflow {
+				worker := ai.New(configFilePath)
+				worker.Init(tasklist, logger, service)
+				worker.Start()
+			} else if service == activity || os.Getenv("SERVICE") == activity {
+				worker := ai.New(configFilePath)
+				worker.Init(tasklist, logger, service)
+				worker.Start()
+			}
+		}
 	}
 }

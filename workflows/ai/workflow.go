@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"github.com/YOVO-LABS/workflow/proto/dense"
 	"strings"
 	"time"
 
@@ -21,9 +22,8 @@ func init() {
 }
 
 // Workflow Session Based to perform nsfw check and watermark correction
-func Workflow(ctx workflow.Context, jobID string, payload string) error {
+func Workflow(ctx workflow.Context, jobID string, payload string) (*dense.Response, error) {
 	logger := workflow.GetLogger(ctx)
-	//cb := jobprocessor.NewCallbackInfo(&format)
 	exec := workflow.GetInfo(ctx).WorkflowExecution
 
 	jobID = exec.ID
@@ -43,7 +43,6 @@ func Workflow(ctx workflow.Context, jobID string, payload string) error {
 		},
 	}
 	jobCtx := workflow.WithActivityOptions(ctx, ao)
-
 	so := &workflow.SessionOptions{
 		CreationTimeout:  time.Hour * 24,
 		ExecutionTimeout: time.Minute * 5,
@@ -53,19 +52,23 @@ func Workflow(ctx workflow.Context, jobID string, payload string) error {
 	ctx, err := workflow.CreateSession(jobCtx, so)
 	if err != nil {
 		logger.Error(SessionCreationErrorMsg, zap.Error(err))
-		return cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)
+		return nil, cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)
 	}
 	defer workflow.CompleteSession(ctx)
 
+	var result dense.Response
 	postID := strings.Split(payload, "|")[0]
 	err = workflow.ExecuteActivity(ctx, checkNSFWAndLogoActivity,
-		jobID, postID).Get(ctx, nil)
+		jobID, postID).Get(ctx, &result)
 	if err != nil {
 		logger.Error(CheckNSFWActivityErrorMsg, zap.Error(err))
-		//cb.PushMessage(NSFW, Task, jobID, CallbackErrorEvent)
-		return cadence.NewCustomError(err.Error(), CheckNSFWActivityErrorMsg)
+		if cadence.IsCustomError(err) {
+			return nil, cadence.NewCustomError(err.Error())
+		} else {
+			_, cancel := workflow.WithCancel(ctx)
+			cancel()
+			return nil, cadence.NewCanceledError(err.Error())
+		}
 	}
-
-	//cb.PushMessage(Completed, Task, jobID, "saved")
-	return nil
+	return &result, nil
 }

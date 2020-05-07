@@ -3,6 +3,8 @@ package ai
 import (
 	"context"
 	"fmt"
+	"errors"
+	"go.uber.org/cadence"
 	"time"
 
 	"github.com/YOVO-LABS/workflow/proto/dense"
@@ -27,31 +29,36 @@ func init() {
 	)
 }
 
-func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string) error {
+func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string) (*dense.Response, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("checkNSFW started", zap.String("jobID", jobID))
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Start")
-
-	err := checkNSFWAndLogo(ctx, url)
+	res, err := checkNSFWAndLogo(ctx, url)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
-		return err
+		return nil, err
 	}
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Finished")
-	return nil
+	return res, nil
 }
 
-func checkNSFWAndLogo(ctx context.Context, url string) error {
+func checkNSFWAndLogo(ctx context.Context, url string) (*dense.Response, error) {
 	mlClient := ctx.Value("mlClient").(dense.PredictClient)
 	imageData := &dense.ImageData{
 		PostId: url,
 	}
 	predictResponse, err := mlClient.PredictPipeline(ctx, imageData)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Println(predictResponse)
-	return nil
+	if predictResponse.IsNext == false {
+		if predictResponse.Error != "" {
+			return nil, cadence.NewCustomError(predictResponse.Message,predictResponse.Error)
+		} else {
+			return nil, errors.New("NSFW Content")
+		}
+	}
+	return predictResponse, nil
 }

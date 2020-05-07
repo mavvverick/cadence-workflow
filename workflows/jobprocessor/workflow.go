@@ -1,6 +1,7 @@
 package jobprocessor
 
 import (
+	"github.com/YOVO-LABS/workflow/proto/dense"
 	"time"
 
 	"github.com/YOVO-LABS/workflow/workflows/ai"
@@ -46,11 +47,19 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 		TaskStartToCloseTimeout:      time.Minute * 24,
 	}
 	ctx = workflow.WithChildOptions(ctx, cwo)
+
+	var predictResult dense.Response
 	err := workflow.ExecuteChildWorkflow(ctx, ai.Workflow,
-		runID, format.Payload).Get(ctx, nil)
+		runID, format.Payload).Get(ctx, &predictResult)
 	if err != nil {
 		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
-		return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
+		if cadence.IsCustomError(err) {
+			return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
+		} else if cadence.IsCanceledError(err) {
+			_, cancel := workflow.WithCancel(ctx)
+			cancel()
+			return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
+		}
 	}
 
 	ao := workflow.ActivityOptions{

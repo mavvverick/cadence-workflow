@@ -1,8 +1,7 @@
-package worker
+package jobprocessor
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -10,8 +9,8 @@ import (
 	"time"
 
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
+	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/YOVO-LABS/workflow/config"
-	"github.com/YOVO-LABS/workflow/internal/service"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -22,6 +21,8 @@ type Worker struct {
 	config         config.AppConfig
 	taskList       string
 	cadenceAdapter ca.CadenceAdapter
+	kafkaAdapter   ka.KafkaAdapter
+	options        worker.Options
 }
 
 //New ...
@@ -35,15 +36,11 @@ func New(configPath string) *Worker {
 }
 
 // Init ...
-func (w *Worker) Init(tasklist string) {
+func (w *Worker) Init(tasklist, verbose, workerType string) {
 	//start dependency injection
 	w.cadenceAdapter.Setup(&w.config.Cadence)
+	w.kafkaAdapter.Setup(&w.config.Kafka)
 	w.taskList = tasklist
-}
-
-//Start ...
-func (w *Worker) Start(verbose, workerType string) {
-	// Configure worker options.
 	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
 		EnableLoggingInReplay: true,
@@ -55,13 +52,9 @@ func (w *Worker) Start(verbose, workerType string) {
 	}
 
 	if workerType == "activity" {
-		//https://stackoverflow.com/questions/58170960/cadence-workflow-pass-host-specific-objects-like-database-connections-service/58170961#58170961
-		mlClientConn, err := service.PredictgRPCConnection()
-		if err != nil {
-			fmt.Println("Error ml client ", err)
-		}
-		myContext := context.WithValue(context.Background(), "mlClient", mlClientConn)
-		workerOptions.BackgroundActivityContext = myContext
+		ctx := context.WithValue(context.Background(), "kafkaClient", w.kafkaAdapter)
+		ctx = context.WithValue(ctx, "cadenceClient", w.cadenceAdapter)
+		workerOptions.BackgroundActivityContext = ctx
 
 		workerOptions.EnableSessionWorker = true
 		workerOptions.DisableWorkflowWorker = true
@@ -75,8 +68,14 @@ func (w *Worker) Start(verbose, workerType string) {
 		workerOptions.DisableActivityWorker = true
 		workerOptions.WorkerStopTimeout = time.Second * 10
 	}
+	w.options = workerOptions
+}
 
-	cadenceWorker := worker.New(w.cadenceAdapter.ServiceClient, w.config.Cadence.Domain, w.taskList, workerOptions)
+//Start ...
+func (w *Worker) Start() {
+	// Configure worker options.
+
+	cadenceWorker := worker.New(w.cadenceAdapter.ServiceClient, w.config.Cadence.Domain, w.taskList, w.options)
 	err := cadenceWorker.Start()
 	if err != nil {
 		w.cadenceAdapter.Logger.Error("Failed to start workers.", zap.Error(err))
@@ -94,7 +93,7 @@ func (w *Worker) Start(verbose, workerType string) {
 		case syscall.SIGTERM:
 			log.Print("Got SIGTERM...")
 		}
-		time.Sleep(time.Second * 5)
+		//time.Sleep(time.Second * 5)
 		cadenceWorker.Stop()
 		close(done)
 	}()
