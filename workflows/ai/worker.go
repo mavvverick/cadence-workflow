@@ -94,7 +94,7 @@ func (w *Worker) Start() {
 		case syscall.SIGTERM:
 			log.Print("Got SIGTERM...")
 		}
-		//time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 5)
 		cadenceWorker.Stop()
 		close(done)
 	}()
