@@ -3,7 +3,6 @@ package cron
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/uber/cadence/common"
@@ -58,7 +57,6 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 
 	cadenceClient  := ctx.Value("cadenceClient").(ca.CadenceAdapter)
 	kafkaClient  := ctx.Value("kafkaClient").(ka.KafkaAdapter)
-	fmt.Println(kafkaClient, cadenceClient)
 
 	duration :=60
 
