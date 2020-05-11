@@ -11,7 +11,7 @@ func (c *KafkaAdapter) Setup(config *KafkaConfig) {
 	producer := NewProducer(config)
 	c.Producer = producer
 
-	consumer := NewConsumer(config)
-	c.Consumer = consumer
+	//consumer := NewConsumer(config)
+	//c.Consumer = consumer
 	return
 }

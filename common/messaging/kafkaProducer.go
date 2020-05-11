@@ -16,7 +16,7 @@ type KafkaProducer struct {
 
 //NewProducer creates a producer object
 func NewProducer(kc *KafkaConfig) *KafkaProducer {
-	kc.Validate()
+	//kc.Validate()
 
 	// brokers := kc.getBrokers(kc.Brokers)
 
