@@ -45,8 +45,9 @@ func NewProducer(kc *KafkaConfig) *KafkaProducer {
 		"sasl.mechanisms":      "SCRAM-SHA-256",
 		"sasl.username":        os.Getenv("KAFKA_USERNAME"),
 		"sasl.password":        os.Getenv("KAFKA_PASS"),
+
 		//"group.id":             os.Getenv("GROUPID"),
-		"default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"},
+		//"default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"},
 		//"debug":            		"generic,broker,security",
 	}
 	producer, err := kafka.NewProducer(config)
@@ -85,12 +86,14 @@ func (kp *KafkaProducer) Publish(topic, key, msg string) error {
 	if m.TopicPartition.Error != nil {
 		return m.TopicPartition.Error
 	}
+	kp.Writer.Flush(1000)
 	return nil
 }
 
 // Close flushes all buffered messages and closes the writer.
 func (kp *KafkaProducer) Close() error {
-	close(kp.Writer.Events())
+	kp.Writer.Close()
+	//close(kp.Writer.Events())
 	// err := kp.Writer.Close()
 	// if err != nil {
 	// 	panic(err)

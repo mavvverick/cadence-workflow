@@ -39,7 +39,7 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.Cal
 	res, err := checkNSFWAndLogo(ctx, jobID, url, cb)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
-		cb.PushMessage(ctx, NSFWErrorMessage, jp.Task, jobID, jp.CallbackErrorEvent)
+		cb.PushMessage(ctx, err.Error(), jp.Task, jobID, jp.CallbackErrorEvent)
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func checkNSFWAndLogo(ctx context.Context, jobID, url string, cb *jp.CallbackInf
 	}
 	if predictResponse.IsNext == false {
 		if predictResponse.Error != "" {
-			return nil, cadence.NewCustomError(predictResponse.Error, predictResponse.Error)
+			return nil, cadence.NewCustomError(predictResponse.Message, predictResponse.Error)
 		}
 		return nil, errors.New(NSFWErrorMessage)
 	}
