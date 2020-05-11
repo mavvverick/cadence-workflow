@@ -54,6 +54,7 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 	if workerType == "activity" {
 		ctx := context.WithValue(context.Background(), "kafkaClient", w.kafkaAdapter)
 		ctx = context.WithValue(ctx, "cadenceClient", w.cadenceAdapter)
+
 		workerOptions.BackgroundActivityContext = ctx
 
 		workerOptions.EnableSessionWorker = true
@@ -63,6 +64,8 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		workerOptions.WorkerStopTimeout = time.Second * 10
 
 	} else if workerType == "workflow" {
+		ctx := context.WithValue(context.Background(), "kafkaClient", w.kafkaAdapter)
+		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = false
 		workerOptions.DisableWorkflowWorker = false
 		workerOptions.DisableActivityWorker = true

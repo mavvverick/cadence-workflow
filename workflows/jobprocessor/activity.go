@@ -3,11 +3,11 @@ package jobprocessor
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"google.golang.org/api/option"
 
 	"cloud.google.com/go/storage"
@@ -28,7 +28,7 @@ const (
 	srcDirectory                  = "raw/"
 	processedDirectory            = "processed/"
 	blackHole                     = "blackHole/"
-	localTmpDirectory       = "/tmp/"
+	localTmpDirectory             = "/tmp/"
 	waterMarkFileName             = "watermark.gif"
 	watermarkFolder               = "pilot"
 )
@@ -51,7 +51,7 @@ func init() {
 	)
 }
 
-func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark string) (*DownloadObject, error) {
+func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark string, cb *CallbackInfo) (*DownloadObject, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Downloading file from gcs", zap.String("jobID", jobID))
 
@@ -60,6 +60,7 @@ func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark st
 	dO, err := downloadResources(ctx, url, payload, watermark)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), DownloadActivityErrorMsg)
+		cb.PushMessage(ctx, Download, Task, jobID, CallbackErrorEvent)
 		return nil, err
 	}
 
@@ -68,7 +69,7 @@ func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark st
 	return dO, nil
 }
 
-func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject, format Format) error {
+func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject, format Format, cb *CallbackInfo) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("compressFileActivity started.", zap.String("jobID", jobID))
 
@@ -77,6 +78,7 @@ func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject,
 	err := compressMedia(dO, format)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CompressionActivityErrorMsg)
+		cb.PushMessage(ctx, Compression, Task, jobID, CallbackErrorEvent)
 		return err
 	}
 
@@ -85,7 +87,7 @@ func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject,
 	return nil
 }
 
-func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format) error {
+func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format, cb *CallbackInfo) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("uploadFileActivity begin", zap.String("jobID", jobID))
 
@@ -94,10 +96,12 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format)
 	err := uploadFile(fpath, format)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), UploadActivityErrorMsg)
+		cb.PushMessage(ctx, Upload, Task, jobID, CallbackErrorEvent)
 		return err
 	}
 
 	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Finished")
+	cb.PushMessage(ctx, Completed, Task, jobID, "saved")
 	return nil
 }
 

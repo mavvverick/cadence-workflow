@@ -3,6 +3,8 @@ package cron
 import (
 	"context"
 	"encoding/json"
+	"os"
+
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/uber/cadence/common"
@@ -15,10 +17,10 @@ import (
 	"time"
 )
 
-const writeWorkflowInfoName  = "writeWorkflowInfo"
+const writeWorkflowInfoName = "writeWorkflowInfo"
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name:"Cron Scaler"})
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: "Cron Scaler"})
 
 	activity.RegisterWithOptions(
 		writeWorkflowInfo,
@@ -134,14 +136,14 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 	}
 
 	if kafkaMsg != nil {
-		err = kafkaClient.Producer.Publish(ctx, "video", string(kafkaMsg))
+		err = kafkaClient.Producer.Publish(os.Getenv("CRON_TOPIC"), "video", string(kafkaMsg))
 		if err != nil {
 			return err
 		}
-		err = kafkaClient.Producer.Close(ctx)
-		if err != nil {
-			return err
-		}
+		//err = kafkaClient.Producer.Close()
+		//if err != nil {
+		//	return err
+		//}
 	}
 	return nil
 }

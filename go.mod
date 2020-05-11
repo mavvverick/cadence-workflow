@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go/storage v1.6.0
+	github.com/confluentinc/confluent-kafka-go v1.4.2
 	github.com/disintegration/imaging v1.6.2
 	github.com/fogleman/gg v1.3.0
 	github.com/go-chi/chi v4.0.3+incompatible

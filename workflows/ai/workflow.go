@@ -1,9 +1,12 @@
 package ai
 
 import (
-	"github.com/YOVO-LABS/workflow/proto/dense"
 	"strings"
 	"time"
+
+	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
+
+	"github.com/YOVO-LABS/workflow/proto/dense"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
@@ -22,7 +25,7 @@ func init() {
 }
 
 // Workflow Session Based to perform nsfw check and watermark correction
-func Workflow(ctx workflow.Context, jobID string, payload string) (*dense.Response, error) {
+func Workflow(ctx workflow.Context, jobID string, payload string, cb *jp.CallbackInfo) (*dense.Response, error) {
 	logger := workflow.GetLogger(ctx)
 	exec := workflow.GetInfo(ctx).WorkflowExecution
 
@@ -59,7 +62,7 @@ func Workflow(ctx workflow.Context, jobID string, payload string) (*dense.Respon
 	var result dense.Response
 	postID := strings.Split(payload, "|")[0]
 	err = workflow.ExecuteActivity(ctx, checkNSFWAndLogoActivity,
-		jobID, postID).Get(ctx, &result)
+		jobID, postID, cb).Get(ctx, &result)
 	if err != nil {
 		logger.Error(CheckNSFWActivityErrorMsg, zap.Error(err))
 		if cadence.IsCustomError(err) {

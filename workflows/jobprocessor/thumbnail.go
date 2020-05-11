@@ -44,10 +44,10 @@ func (d *DrawPoster) BuildImage() error {
 	x1Profile, y1Profile := factor*128, factor*176
 	_, y2Profile := factor*232, factor*280
 
-	mask := gg.NewContext(background.Bounds().Max.X,background.Bounds().Max.Y)
+	mask := gg.NewContext(background.Bounds().Max.X, background.Bounds().Max.Y)
 
-	mask.DrawCircle(float64(xBG), (y2Profile + y1Profile)/2, (y2Profile-y1Profile)/2)
-	mask.SetRGB(0,0,0)
+	mask.DrawCircle(float64(xBG), (y2Profile+y1Profile)/2, (y2Profile-y1Profile)/2)
+	mask.SetRGB(0, 0, 0)
 	mask.Fill()
 	mask.SetMask(mask.AsMask())
 	mask.DrawImage(profile, int(x1Profile), int(y1Profile))
@@ -63,12 +63,12 @@ func (d *DrawPoster) BuildImage() error {
 	ringSize := float64(5)
 
 	poster.DrawStringAnchored(d.User.Name, float64(xBG), y2Text, 0.5, 0.5)
-	poster.DrawCircle(float64(xBG), (y2Profile + y1Profile)/2, (y2Profile-y1Profile+ringSize)/2)
-	poster.SetRGB(1,1,1)
+	poster.DrawCircle(float64(xBG), (y2Profile+y1Profile)/2, (y2Profile-y1Profile+ringSize)/2)
+	poster.SetRGB(1, 1, 1)
 	poster.Fill()
 	poster.DrawImage(mask.Image(), 0, 0)
 
-	err = poster.SavePNG("/tmp/resources/"+d.User.Name+".png")
+	err = poster.SavePNG("/tmp/resources/" + d.User.Name + ".png")
 	if err != nil {
 		return err
 	}

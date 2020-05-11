@@ -57,6 +57,7 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 			fmt.Println("Error ml client ", err)
 		}
 		ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
+		ctx = context.WithValue(ctx, "kafkaClient", w.kafkaAdapter)
 		workerOptions.BackgroundActivityContext = ctx
 
 		workerOptions.EnableSessionWorker = true

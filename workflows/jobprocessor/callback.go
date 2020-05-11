@@ -1,10 +1,14 @@
 package jobprocessor
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"go.uber.org/cadence/activity"
+	"os"
+	"strings"
+
+	ka "github.com/YOVO-LABS/workflow/common/messaging"
 )
 
 //CallbackInfo ...
@@ -21,28 +25,29 @@ type CallbackInfo struct {
 func NewCallbackInfo(format *Format) *CallbackInfo {
 	return &CallbackInfo{
 		URL:     format.CallbackURL,
-		Payload: format.Payload,
+		Payload: strings.Split(format.Payload, "|")[0],
 	}
 }
 
 type webhookMessage struct {
 	Status       string `json:"status"`
-	CallbackType string `json:"callback_type"`
-	TaskToken    string `json:"task_token"`
+	TaskToken    string `json:"taskToken"`
 	Event        string `json:"event"`
-	Payload      string `json:"payload"`
-	ErrorCode    int    `json:"error_code,omitempty"`
-	ErrorMessage string `json:"error_message,omitempty"`
+	PostID       string `json:"postID"`
+	ErrorCode    int    `json:"errorCode,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 //PushMessage ...
-func (e *CallbackInfo) PushMessage(status, callbackType, token, event string) {
+func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, token, event string) {
+	if activity.GetInfo(ctx).Attempt < 1 && event == CallbackErrorEvent {
+		return
+	}
 	requestBody := &webhookMessage{
-		Status:       fmt.Sprintf(`{"status":"%v"}`, status),
-		CallbackType: callbackType,
-		TaskToken:    token,
-		Event:        event,
-		Payload:      e.Payload,
+		Status:    fmt.Sprintf(`{"status":"%v"}`, status),
+		TaskToken: token,
+		Event:     event,
+		PostID:    e.Payload,
 	}
 
 	if event == "error" {
@@ -54,14 +59,23 @@ func (e *CallbackInfo) PushMessage(status, callbackType, token, event string) {
 	if err != nil {
 		fmt.Println("err")
 	}
-	req, err := http.NewRequest("POST", e.URL, bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
+	kafkaClient := ctx.Value("kafkaClient").(ka.KafkaAdapter)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
+	if body != nil {
+		err = kafkaClient.Producer.Publish(os.Getenv("CB_TOPIC"), "video", string(body))
+		if err != nil {
+			fmt.Println("Cannot push message to kafka")
+		}
 	}
 
-	defer resp.Body.Close()
+	// req, err := http.NewRequest("POST", e.URL, bytes.NewBuffer(body))
+	// req.Header.Set("Content-Type", "application/json")
+
+	// client := &http.Client{}
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// defer resp.Body.Close()
 }

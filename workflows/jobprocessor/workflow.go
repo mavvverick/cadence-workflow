@@ -1,10 +1,9 @@
 package jobprocessor
 
 import (
-	"github.com/YOVO-LABS/workflow/proto/dense"
 	"time"
 
-	"github.com/YOVO-LABS/workflow/workflows/ai"
+	"github.com/YOVO-LABS/workflow/proto/dense"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
@@ -23,6 +22,7 @@ const (
 	Upload                      = "UPLOAD"
 	Task                        = "task"
 	CallbackErrorEvent          = "error"
+	CallbackCancelEvent         = "cancel"
 	Completed                   = "COMPLETED"
 )
 
@@ -42,24 +42,23 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 
 	cwo := workflow.ChildWorkflowOptions{
 		WorkflowID:                   runID,
-		TaskList:                     ai.Tasklist,
+		TaskList:                     "AI",
 		ExecutionStartToCloseTimeout: time.Hour * 24,
 		TaskStartToCloseTimeout:      time.Minute * 24,
 	}
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
 	var predictResult dense.Response
-	err := workflow.ExecuteChildWorkflow(ctx, ai.Workflow,
-		runID, format.Payload).Get(ctx, &predictResult)
+	err := workflow.ExecuteChildWorkflow(ctx, "AI",
+		runID, format.Payload, cb).Get(ctx, &predictResult)
 	if err != nil {
 		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
 		if cadence.IsCustomError(err) {
 			return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
-		} else if cadence.IsCanceledError(err) {
-			_, cancel := workflow.WithCancel(ctx)
-			cancel()
-			return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
 		}
+		_, cancel := workflow.WithCancel(ctx)
+		cancel()
+		return cadence.NewCanceledError(err.Error(), ChildWorkflowExecErrMsg)
 	}
 
 	ao := workflow.ActivityOptions{
@@ -94,29 +93,24 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	var dO DownloadObject
 
 	err = workflow.ExecuteActivity(ctx, downloadFileActivity,
-		jobID, format.Source, format.Payload, format.WatermarkURL).Get(ctx, &dO)
+		jobID, format.Source, format.Payload, format.WatermarkURL, cb).Get(ctx, &dO)
 	if err != nil {
 		logger.Error(DownloadActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Download, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), DownloadActivityErrorMsg)
 	}
 
 	err = workflow.ExecuteActivity(ctx, compressMediaActivity,
-		jobID, dO, format).Get(ctx, nil)
+		jobID, dO, format, cb).Get(ctx, nil)
 	if err != nil {
 		logger.Error(CompressionActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Compression, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), CompressionActivityErrorMsg)
 	}
 
 	err = workflow.ExecuteActivity(ctx, uploadFileActivity,
-		jobID, dO.VideoPath, format).Get(ctx, nil)
+		jobID, dO.VideoPath, format, cb).Get(ctx, nil)
 	if err != nil {
 		logger.Error(UploadActivityErrorMsg, zap.Error(err))
-		cb.PushMessage(Upload, Task, jobID, CallbackErrorEvent)
 		return cadence.NewCustomError(err.Error(), UploadActivityErrorMsg)
 	}
-
-	cb.PushMessage(Completed, Task, jobID, "saved")
 	return nil
 }
