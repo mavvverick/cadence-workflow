@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/cadence/activity"
 	"os"
 	"strings"
+
+	"go.uber.org/cadence/activity"
 
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
 )
@@ -34,7 +35,7 @@ type webhookMessage struct {
 	TaskToken    string `json:"taskToken"`
 	Event        string `json:"event"`
 	PostID       string `json:"postID"`
-	ErrorCode    int    `json:"errorCode,omitempty"`
+	ErrorCode    string `json:"errorCode,omitempty"`
 	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
@@ -51,7 +52,7 @@ func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, to
 	}
 
 	if event == "error" {
-		requestBody.ErrorCode = 500
+		requestBody.ErrorCode = "500"
 		requestBody.ErrorMessage = status
 	}
 

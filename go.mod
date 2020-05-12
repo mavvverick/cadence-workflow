@@ -19,7 +19,6 @@ require (
 	github.com/pborman/uuid v1.2.0
 	github.com/segmentio/kafka-go v0.3.5
 	github.com/shopspring/decimal v0.0.0-20200227202807-02e2044944cc
-	github.com/tensorflow/tensorflow v2.1.0+incompatible
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence v0.11.0
 	go.uber.org/cadence v0.11.2
