@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/cadence"
 	"time"
+
+	"go.uber.org/cadence"
 
 	"github.com/YOVO-LABS/workflow/proto/dense"
 	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
@@ -42,6 +43,15 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.Cal
 		cb.PushMessage(ctx, err.Error(), jp.Task, jobID, jp.CallbackErrorEvent)
 		return nil, err
 	}
+	if res.IsNext == false {
+		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
+		if res.Error != "" {
+			cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackErrorEvent)
+			return nil, cadence.NewCustomError(res.Message, res.Error)
+		}
+		cb.PushMessage(ctx, NSFWErrorMessage, jp.Task, jobID, jp.CallbackRejectEvent)
+		return nil, errors.New(NSFWErrorMessage)
+	}
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Finished")
 	return res, nil
@@ -55,12 +65,6 @@ func checkNSFWAndLogo(ctx context.Context, jobID, url string, cb *jp.CallbackInf
 	predictResponse, err := mlClient.PredictPipeline(ctx, imageData)
 	if err != nil {
 		return nil, err
-	}
-	if predictResponse.IsNext == false {
-		if predictResponse.Error != "" {
-			return nil, cadence.NewCustomError(predictResponse.Message, predictResponse.Error)
-		}
-		return nil, errors.New(NSFWErrorMessage)
 	}
 	return predictResponse, nil
 }

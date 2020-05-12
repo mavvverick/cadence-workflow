@@ -22,7 +22,7 @@ const (
 	Upload                      = "UPLOAD"
 	Task                        = "task"
 	CallbackErrorEvent          = "error"
-	CallbackCancelEvent         = "cancel"
+	CallbackRejectEvent         = "reject"
 	Completed                   = "COMPLETED"
 )
 

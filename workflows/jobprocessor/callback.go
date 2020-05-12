@@ -41,7 +41,7 @@ type webhookMessage struct {
 
 //PushMessage ...
 func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, token, event string) {
-	if activity.GetInfo(ctx).Attempt < 1 && event == CallbackErrorEvent {
+	if activity.GetInfo(ctx).Attempt < 1 && (event == CallbackErrorEvent || event == CallbackRejectEvent) {
 		return
 	}
 	requestBody := &webhookMessage{
