@@ -2,15 +2,18 @@ package jobprocessor
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"cloud.google.com/go/storage"
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/YOVO-LABS/workflow/config"
+	"google.golang.org/api/option"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
@@ -40,6 +43,12 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 	//start dependency injection
 	w.cadenceAdapter.Setup(&w.config.Cadence)
 	w.kafkaAdapter.Setup(&w.config.Kafka)
+	gcsClient, err := storage.NewClient(context.Background(),
+		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
+	if err != nil {
+		fmt.Println("Cannot initiate GCS Client")
+		return
+	}
 	w.taskList = tasklist
 	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
@@ -54,6 +63,7 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 	if workerType == "activity" {
 		ctx := context.WithValue(context.Background(), "kafkaClient", w.kafkaAdapter)
 		ctx = context.WithValue(ctx, "cadenceClient", w.cadenceAdapter)
+		ctx = context.WithValue(ctx, "gcsClient", gcsClient)
 
 		workerOptions.BackgroundActivityContext = ctx
 
@@ -64,8 +74,6 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		workerOptions.WorkerStopTimeout = time.Second * 10
 
 	} else if workerType == "workflow" {
-		ctx := context.WithValue(context.Background(), "kafkaClient", w.kafkaAdapter)
-		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = false
 		workerOptions.DisableWorkflowWorker = false
 		workerOptions.DisableActivityWorker = true

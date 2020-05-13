@@ -39,14 +39,13 @@ func NewProducer(kc *KafkaConfig) *KafkaProducer {
 	// 		Topic:    kc.Topic,
 	// 	})
 	config := &kafka.ConfigMap{
-		"metadata.broker.list": os.Getenv("KAFKA_BROKERS"),
-		"broker.address.family" : "v4",
-		"security.protocol":    "SASL_SSL",
-		"sasl.mechanisms":      "SCRAM-SHA-256",
-		"sasl.username":        os.Getenv("KAFKA_USERNAME"),
-		"sasl.password":        os.Getenv("KAFKA_PASS"),
-
-		//"group.id":             os.Getenv("GROUPID"),
+		"metadata.broker.list":  os.Getenv("KAFKA_BROKERS"),
+		"broker.address.family": "v4",
+		"security.protocol":     "SASL_SSL",
+		"sasl.mechanisms":       "SCRAM-SHA-256",
+		"sasl.username":         os.Getenv("KAFKA_USERNAME"),
+		"sasl.password":         os.Getenv("KAFKA_PASS"),
+		"group.id":              os.Getenv("GROUPID"),
 		//"default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"},
 		//"debug":            		"generic,broker,security",
 	}
@@ -81,11 +80,16 @@ func (kp *KafkaProducer) Publish(topic, key, msg string) error {
 	}
 
 	e := <-kp.Writer.Events()
-	m := e.(*kafka.Message)
-
-	if m.TopicPartition.Error != nil {
-		return m.TopicPartition.Error
+	switch ev := e.(type) {
+	case *kafka.Message:
+		m := e.(*kafka.Message)
+		if m.TopicPartition.Error != nil {
+			return m.TopicPartition.Error
+		}
+	case kafka.Error:
+		fmt.Printf("kafka error: %v", ev)
 	}
+
 	kp.Writer.Flush(1000)
 	return nil
 }

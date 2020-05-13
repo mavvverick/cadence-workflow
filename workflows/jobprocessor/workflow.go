@@ -39,6 +39,17 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 
 	jobID = exec.ID
 	runID := exec.RunID
+	so := &workflow.SessionOptions{
+		CreationTimeout:  time.Hour * 24,
+		ExecutionTimeout: time.Minute * 5,
+		HeartbeatTimeout: time.Minute * 3,
+	}
+	ctx, err := workflow.CreateSession(ctx, so)
+	if err != nil {
+		logger.Error(SessionCreationErrorMsg, zap.Error(err))
+		return cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)
+	}
+	defer workflow.CompleteSession(ctx)
 
 	cwo := workflow.ChildWorkflowOptions{
 		WorkflowID:                   runID,
@@ -49,16 +60,16 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
 	var predictResult dense.Response
-	err := workflow.ExecuteChildWorkflow(ctx, "AI",
+	err = workflow.ExecuteChildWorkflow(ctx, "AI",
 		runID, format.Payload, cb).Get(ctx, &predictResult)
 	if err != nil {
 		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
 		if cadence.IsCustomError(err) {
-			return cadence.NewCustomError(err.Error(), ChildWorkflowExecErrMsg)
+			return cadence.NewCustomError(ChildWorkflowExecErrMsg, err.Error())
 		}
 		_, cancel := workflow.WithCancel(ctx)
 		cancel()
-		return cadence.NewCanceledError(err.Error(), ChildWorkflowExecErrMsg)
+		return cadence.NewCanceledError(ChildWorkflowExecErrMsg, err.Error())
 	}
 
 	ao := workflow.ActivityOptions{
@@ -75,20 +86,7 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 			NonRetriableErrorReasons: []string{"bad-error"},
 		},
 	}
-	jobCtx := workflow.WithActivityOptions(ctx, ao)
-
-	so := &workflow.SessionOptions{
-		CreationTimeout:  time.Hour * 24,
-		ExecutionTimeout: time.Minute * 5,
-		HeartbeatTimeout: time.Minute * 3,
-	}
-
-	ctx, err = workflow.CreateSession(jobCtx, so)
-	if err != nil {
-		logger.Error(SessionCreationErrorMsg, zap.Error(err))
-		return cadence.NewCustomError(err.Error(), SessionCreationErrorMsg)
-	}
-	defer workflow.CompleteSession(ctx)
+	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	var dO DownloadObject
 

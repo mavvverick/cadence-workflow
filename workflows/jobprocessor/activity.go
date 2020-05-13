@@ -93,7 +93,7 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format,
 
 	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Start")
 
-	err := uploadFile(fpath, format)
+	err := uploadFile(ctx, fpath, format)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), UploadActivityErrorMsg)
 		cb.PushMessage(ctx, Upload, Task, jobID, CallbackErrorEvent)
@@ -113,19 +113,13 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	objectPath := strings.Split(url, ".com/")[1]
 	object := strings.Split(objectPath, "/")
 
-	client, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-
-	err = os.MkdirAll(*localDirectory+"resources/", 0770)
+	client := ctx.Value("gcsClient").(*storage.Client)
+	err := os.MkdirAll(*localDirectory+"resources/", 0770)
 	if err != nil {
 		return nil, err
 	}
 
-	localDirectory = common.StringPtr(localTmpDirectory+"resources/")
+	localDirectory = common.StringPtr(localTmpDirectory + "resources/")
 
 	// download video to be encoded
 	localFileName := *localDirectory + object[0] + "_" + object[len(object)-1]
@@ -157,7 +151,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 
 		//download user profile photo
 		err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, userFileName)
-		if err ==  storage.ErrObjectNotExist {
+		if err == storage.ErrObjectNotExist {
 			objectPath := "assets/background2.mp4"
 			thumbnailBG := localTmpDirectory + "bg2.mp4"
 			if _, err := os.Stat(thumbnailBG); err != nil {
@@ -167,7 +161,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 					return nil, err
 				}
 			}
-			os.Link(thumbnailBG, *localDirectory + payloadFields[2] + ".mp4")
+			os.Link(thumbnailBG, *localDirectory+payloadFields[2]+".mp4")
 			dO.UserImage = payloadFields[2]
 			return &dO, nil
 		} else if err != nil {
@@ -180,7 +174,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		if _, err := os.Stat(thumbnailBG); err != nil {
 			//download background for the thumbnail
 			err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, thumbnailBG)
-			if err ==  storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist {
 				return &dO, nil
 			} else if err != nil {
 				return nil, err
@@ -193,7 +187,7 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 		if _, err := os.Stat(font); err != nil {
 			//download font used for the thumbnail
 			err = downloadGCSObjectToLocal(ctx, client, bucket, objectPath, font)
-			if err ==  storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist {
 				return &dO, err
 			} else if err != nil {
 				return nil, err
@@ -288,7 +282,7 @@ func createThumbnail(dO DownloadObject) error {
 		if err != nil {
 			return err
 		}
-		err = pngToMp4(*localDirectory+poster.User.Name+".png", *localDirectory + dO.UserImage+".mp4")
+		err = pngToMp4(*localDirectory+poster.User.Name+".png", *localDirectory+dO.UserImage+".mp4")
 		if err != nil {
 			return err
 		}
@@ -296,15 +290,8 @@ func createThumbnail(dO DownloadObject) error {
 	return nil
 }
 
-func uploadFile(fpath string, format Format) error {
-	ctx := context.Background()
-	storageClient, err := storage.NewClient(ctx,
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
-	if err != nil {
-		return err
-	}
-	defer storageClient.Close()
-
+func uploadFile(ctx context.Context, fpath string, format Format) error {
+	storageClient := ctx.Value("gcsClient").(*storage.Client)
 	for _, encode := range format.Encode {
 		pathArr := strings.Split(encode.Destination, "/")
 		bucket := pathArr[3]
@@ -326,7 +313,7 @@ func uploadFile(fpath string, format Format) error {
 		}
 	}
 
-	if err = os.RemoveAll(*localDirectory); err != nil {
+	if err := os.RemoveAll(*localDirectory); err != nil {
 		return err
 	}
 	return nil

@@ -45,7 +45,7 @@ func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, to
 		return
 	}
 	requestBody := &webhookMessage{
-		Status:    fmt.Sprintf(`{"status":"%v"}`, status),
+		Status:    status,
 		TaskToken: token,
 		Event:     event,
 		PostID:    e.Payload,
@@ -63,7 +63,7 @@ func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, to
 	kafkaClient := ctx.Value("kafkaClient").(ka.KafkaAdapter)
 
 	if body != nil {
-		err = kafkaClient.Producer.Publish(os.Getenv("CB_TOPIC"), "video", string(body))
+		err = kafkaClient.Producer.Publish(os.Getenv("CB_TOPIC"), e.Payload, string(body))
 		if err != nil {
 			fmt.Println("Cannot push message to kafka")
 		}

@@ -67,11 +67,10 @@ func Workflow(ctx workflow.Context, jobID string, payload string, cb *jp.Callbac
 		logger.Error(CheckNSFWActivityErrorMsg, zap.Error(err))
 		if cadence.IsCustomError(err) {
 			return nil, cadence.NewCustomError(err.Error())
-		} else {
-			_, cancel := workflow.WithCancel(ctx)
-			cancel()
-			return nil, cadence.NewCanceledError(err.Error())
 		}
+		_, cancel := workflow.WithCancel(ctx)
+		cancel()
+		return nil, cadence.NewCanceledError(err.Error())
 	}
 	return &result, nil
 }

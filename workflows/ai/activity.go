@@ -37,17 +37,17 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.Cal
 	logger.Info("checkNSFW started", zap.String("jobID", jobID))
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Start")
-	res, err := checkNSFWAndLogo(ctx, jobID, url, cb)
+	res, err := checkNSFWAndLogo(ctx, url)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
 		cb.PushMessage(ctx, err.Error(), jp.Task, jobID, jp.CallbackErrorEvent)
-		return nil, err
+		return nil, cadence.NewCustomError(err.Error())
 	}
 	if res.IsNext == false {
 		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
 		if res.Error != "" {
-			cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackErrorEvent)
-			return nil, cadence.NewCustomError(res.Message, res.Error)
+			cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
+			return nil, cadence.NewCustomError(res.Error)
 		}
 		cb.PushMessage(ctx, NSFWErrorMessage, jp.Task, jobID, jp.CallbackRejectEvent)
 		return nil, errors.New(NSFWErrorMessage)
@@ -57,7 +57,7 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.Cal
 	return res, nil
 }
 
-func checkNSFWAndLogo(ctx context.Context, jobID, url string, cb *jp.CallbackInfo) (*dense.Response, error) {
+func checkNSFWAndLogo(ctx context.Context, url string) (*dense.Response, error) {
 	mlClient := ctx.Value("mlClient").(dense.PredictClient)
 	imageData := &dense.ImageData{
 		PostId: url,
