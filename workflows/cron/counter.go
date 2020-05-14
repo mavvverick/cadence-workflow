@@ -139,10 +139,10 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 		if err != nil {
 			return err
 		}
-		err = kafkaClient.Producer.Close()
-		if err != nil {
-			return err
-		}
+		// err = kafkaClient.Producer.Close()
+		// if err != nil {
+		// 	return err
+		// }
 	}
 	return nil
 }
