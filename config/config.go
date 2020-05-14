@@ -31,7 +31,7 @@ func (h *AppConfig) LoadConfig(configPath string) {
 	h.Cadence.Service = os.Getenv("CADENCE_SERVICE")
 
 	h.Kafka.Brokers = os.Getenv("KAFKA_BROKERS")
-	h.Kafka.Topic = os.Getenv("KAFKA_TOPIC")
+	// h.Kafka.Topic = os.Getenv("KAFKA_TOPIC")
 
 	logger, err := zap.NewDevelopment()
 	if err != nil {

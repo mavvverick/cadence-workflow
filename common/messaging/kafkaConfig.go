@@ -9,7 +9,7 @@ import (
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
-		Topic 	string
+		// Topic 	string
 		Brokers string
 	}
 
@@ -23,9 +23,9 @@ func (k *KafkaConfig) Validate() {
 	if len(k.Brokers) == 0 {
 		fmt.Println(errors.New("Empty Broker"))
 	}
-	if len(k.Topic) == 0 {
-		fmt.Println(errors.New("Empty Topic"))
-	}
+	// if len(k.Topic) == 0 {
+	// 	fmt.Println(errors.New("Empty Topic"))
+	// }
 }
 
 func (k *KafkaConfig) getBrokers(brokers string) []string {

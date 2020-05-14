@@ -23,8 +23,8 @@ func NewConsumer(kc *KafkaConfig) *KafkaConsumer {
 
 	reader := kafka.NewReader(
 		kafka.ReaderConfig{
-			Brokers:   brokers,
-			Topic:     kc.Topic,
+			Brokers: brokers,
+			// Topic:     kc.Topic,
 			Partition: 0,
 			MinBytes:  10e3, // 10KB
 			MaxBytes:  10e6, //10 MB

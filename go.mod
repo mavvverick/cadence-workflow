@@ -24,6 +24,7 @@ require (
 	go.uber.org/cadence v0.11.2
 	go.uber.org/yarpc v1.44.0
 	go.uber.org/zap v1.14.1
+	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0
 	google.golang.org/api v0.18.0
 	google.golang.org/grpc v1.27.1
 	gopkg.in/validator.v2 v2.0.0-20191107172027-c3144fdedc21

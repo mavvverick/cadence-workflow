@@ -3,7 +3,6 @@ package cron
 import (
 	"context"
 	"encoding/json"
-	"os"
 
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
@@ -51,21 +50,21 @@ func Workflow(ctx workflow.Context, jobID string) error {
 		return err
 	}
 
-	return  nil
+	return nil
 }
 
 func writeWorkflowInfo(ctx context.Context, jobID string) error {
 	var workflowInfo WorkflowExecution
 
-	cadenceClient  := ctx.Value("cadenceClient").(ca.CadenceAdapter)
-	kafkaClient  := ctx.Value("kafkaClient").(ka.KafkaAdapter)
+	cadenceClient := ctx.Value("cadenceClient").(ca.CadenceAdapter)
+	kafkaClient := ctx.Value("kafkaCronClient").(ka.KafkaAdapter)
 
-	duration :=60
+	duration := 60
 
 	requestClosedWorkflow := &shared.ListClosedWorkflowExecutionsRequest{
 		MaximumPageSize: common.Int32Ptr(int32(10000)),
 		StartTimeFilter: &shared.StartTimeFilter{
-			EarliestTime: common.Int64Ptr(time.Now().Add(time.Duration(-duration)*time.Minute).UnixNano()),
+			EarliestTime: common.Int64Ptr(time.Now().Add(time.Duration(-duration) * time.Minute).UnixNano()),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 	}
@@ -75,7 +74,7 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 		if err != nil {
 			return err
 		}
-		if len(listClosedWorkflow.Executions) != 0  {
+		if len(listClosedWorkflow.Executions) != 0 {
 			workflowInfo.Total += len(listClosedWorkflow.Executions)
 			for _, w := range listClosedWorkflow.Executions {
 				switch *w.CloseStatus {
@@ -105,7 +104,7 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 	requestOpenWorkflow := &shared.ListOpenWorkflowExecutionsRequest{
 		MaximumPageSize: common.Int32Ptr(int32(3)),
 		StartTimeFilter: &shared.StartTimeFilter{
-			EarliestTime: common.Int64Ptr(time.Now().Add(time.Duration(-duration)*time.Minute).UnixNano()),
+			EarliestTime: common.Int64Ptr(time.Now().Add(time.Duration(-duration) * time.Minute).UnixNano()),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 	}
@@ -115,7 +114,7 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 		if err != nil {
 			return err
 		}
-		if len(listOpenWorkflow.Executions) != 0  {
+		if len(listOpenWorkflow.Executions) != 0 {
 			workflowInfo.Open = len(listOpenWorkflow.Executions)
 			workflowInfo.Total += workflowInfo.Open
 		}
@@ -136,7 +135,7 @@ func writeWorkflowInfo(ctx context.Context, jobID string) error {
 	}
 
 	if kafkaMsg != nil {
-		err = kafkaClient.Producer.Publish(os.Getenv("CRON_TOPIC"), "video", string(kafkaMsg))
+		err = kafkaClient.Producer.Publish(ctx, "video", string(kafkaMsg))
 		if err != nil {
 			return err
 		}

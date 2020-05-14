@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"go.uber.org/cadence/activity"
@@ -60,10 +59,10 @@ func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, to
 	if err != nil {
 		fmt.Println("err")
 	}
-	kafkaClient := ctx.Value("kafkaClient").(ka.KafkaAdapter)
+	kafkaClient := ctx.Value("kafkaCallbackClient").(ka.KafkaAdapter)
 
 	if body != nil {
-		err = kafkaClient.Producer.Publish(os.Getenv("CB_TOPIC"), e.Payload, string(body))
+		err = kafkaClient.Producer.Publish(ctx, e.Payload, string(body))
 		if err != nil {
 			fmt.Println("Cannot push message to kafka")
 		}

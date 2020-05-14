@@ -3,17 +3,18 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
 	"github.com/YOVO-LABS/workflow/config"
 	"github.com/YOVO-LABS/workflow/internal/grpc"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 //Worker ...
@@ -21,8 +22,8 @@ type Worker struct {
 	config         config.AppConfig
 	taskList       string
 	cadenceAdapter ca.CadenceAdapter
-	kafkaAdapter   ka.KafkaAdapter
-	options        worker.Options
+	// kafkaAdapter   ka.KafkaAdapter
+	options worker.Options
 }
 
 //New ...
@@ -39,27 +40,25 @@ func New(configPath string) *Worker {
 func (w *Worker) Init(tasklist, verbose, workerType string) {
 	//start dependency injection
 	w.cadenceAdapter.Setup(&w.config.Cadence)
-	w.kafkaAdapter.Setup(&w.config.Kafka)
-	w.taskList = tasklist
-	workerOptions := worker.Options {
+
+	mlClientConn, err := grpc.PredictgRPCConnection()
+	if err != nil {
+		fmt.Println("Error ml client ", err)
+	}
+
+	var kafkaCallbackClient ka.KafkaAdapter
+	kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
+
+	ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
+	ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
+
+	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
 		EnableLoggingInReplay: true,
 	}
-	if verbose == "0" {
-		workerOptions.Logger = zap.NewNop()
-	} else {
-		workerOptions.Logger = w.cadenceAdapter.Logger
-	}
 
 	if workerType == "activity" {
-		mlClientConn, err := grpc.PredictgRPCConnection()
-		if err != nil {
-			fmt.Println("Error ml client ", err)
-		}
-		ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
-		ctx = context.WithValue(ctx, "kafkaClient", w.kafkaAdapter)
 		workerOptions.BackgroundActivityContext = ctx
-
 		workerOptions.EnableSessionWorker = true
 		workerOptions.DisableWorkflowWorker = true
 		workerOptions.DisableActivityWorker = false
@@ -72,7 +71,13 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		workerOptions.DisableActivityWorker = true
 		workerOptions.WorkerStopTimeout = time.Second * 10
 	}
+	if verbose == "0" {
+		workerOptions.Logger = zap.NewNop()
+	} else {
+		workerOptions.Logger = w.cadenceAdapter.Logger
+	}
 	w.options = workerOptions
+	w.taskList = tasklist
 }
 
 //Start ...

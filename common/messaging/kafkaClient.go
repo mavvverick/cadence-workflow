@@ -7,8 +7,8 @@ type KafkaAdapter struct {
 }
 
 // Setup ...
-func (c *KafkaAdapter) Setup(config *KafkaConfig) {
-	producer := NewProducer(config)
+func (c *KafkaAdapter) Setup(config *KafkaConfig, topic string) {
+	producer := NewProducer(config, topic)
 	c.Producer = producer
 
 	//consumer := NewConsumer(config)
