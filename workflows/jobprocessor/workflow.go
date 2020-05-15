@@ -1,6 +1,8 @@
 package jobprocessor
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/YOVO-LABS/workflow/proto/dense"
@@ -31,7 +33,7 @@ func init() {
 	//workflow.RegisterWithOptions(ai.Workflow, workflow.RegisterOptions{Name:ai.Tasklist})
 }
 
-// Workflow Session Based to perform download, compression and upload
+// Workflow Session Based to perform transcoding with AI child workflow to detect nsfw
 func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	logger := workflow.GetLogger(ctx)
 	cb := NewCallbackInfo(&format)
@@ -59,17 +61,19 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	}
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
-	var predictResult dense.Response
-	err = workflow.ExecuteChildWorkflow(ctx, "AI",
-		runID, format.Payload, cb).Get(ctx, &predictResult)
-	if err != nil {
-		logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
-		if cadence.IsCustomError(err) {
-			return cadence.NewCustomError(ChildWorkflowExecErrMsg, err.Error())
+	if strings.Split(format.Payload, "|")[1] == strconv.Itoa(1) {
+		var predictResult dense.Response
+		err = workflow.ExecuteChildWorkflow(ctx, "AI",
+			runID, format.Payload, format.Source, cb).Get(ctx, &predictResult)
+		if err != nil {
+			logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
+			if cadence.IsCustomError(err) {
+				return cadence.NewCustomError(ChildWorkflowExecErrMsg, err.Error())
+			}
+			_, cancel := workflow.WithCancel(ctx)
+			cancel()
+			return cadence.NewCanceledError(ChildWorkflowExecErrMsg, err.Error())
 		}
-		_, cancel := workflow.WithCancel(ctx)
-		cancel()
-		return cadence.NewCanceledError(ChildWorkflowExecErrMsg, err.Error())
 	}
 
 	ao := workflow.ActivityOptions{
