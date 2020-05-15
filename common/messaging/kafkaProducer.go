@@ -23,14 +23,17 @@ func NewProducer(kc *KafkaConfig, topic string) *KafkaProducer {
 
 	brokers := kc.getBrokers(kc.Brokers)
 
-	mechanism, _ := scram.Mechanism(scram.SHA256, os.Getenv("KAFKA_USERNAME"), os.Getenv("KAFKA_PASS"))
 	dialer := &kafka.Dialer{
-		Timeout:       10 * time.Second,
-		SASLMechanism: mechanism,
-		DualStack:     true,
-		TLS: &tls.Config{
+		Timeout: 10 * time.Second,
+	}
+
+	if os.Getenv("KAFKA_USERNAME") != "" {
+		mechanism, _ := scram.Mechanism(scram.SHA256, os.Getenv("KAFKA_USERNAME"), os.Getenv("KAFKA_PASS"))
+		dialer.SASLMechanism = mechanism
+		dialer.DualStack = true
+		dialer.TLS = &tls.Config{
 			InsecureSkipVerify: true,
-		},
+		}
 	}
 
 	writer := kafka.NewWriter(

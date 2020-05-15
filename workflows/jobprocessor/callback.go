@@ -19,13 +19,15 @@ type CallbackInfo struct {
 	TaskToken string
 	Event     string
 	Payload   string
+	PostID    string
 }
 
 //NewCallbackInfo ...
 func NewCallbackInfo(format *Format) *CallbackInfo {
 	return &CallbackInfo{
 		URL:     format.CallbackURL,
-		Payload: strings.Split(format.Payload, "|")[0],
+		PostID:  strings.Split(format.Payload, "|")[0],
+		Payload: format.Payload,
 	}
 }
 
