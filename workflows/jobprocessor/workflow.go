@@ -64,7 +64,7 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	if strings.Split(format.Payload, "|")[1] == strconv.Itoa(1) {
 		var predictResult dense.Response
 		err = workflow.ExecuteChildWorkflow(ctx, "AI",
-			runID, format.Payload, format.Source, cb).Get(ctx, &predictResult)
+			runID, format.Payload, cb).Get(ctx, &predictResult)
 		if err != nil {
 			logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
 			if cadence.IsCustomError(err) {
