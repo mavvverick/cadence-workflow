@@ -25,7 +25,7 @@ func init() {
 }
 
 // Workflow Session Based to perform nsfw check and watermark correction
-func Workflow(ctx workflow.Context, jobID string, payload string, cb *jp.CallbackInfo) (*dense.Response, error) {
+func Workflow(ctx workflow.Context, jobID string, payload, bucket string, cb *jp.CallbackInfo) (*dense.Response, error) {
 	logger := workflow.GetLogger(ctx)
 	exec := workflow.GetInfo(ctx).WorkflowExecution
 
@@ -62,7 +62,7 @@ func Workflow(ctx workflow.Context, jobID string, payload string, cb *jp.Callbac
 	var result dense.Response
 	postID := strings.Split(payload, "|")[0]
 	err = workflow.ExecuteActivity(ctx, checkNSFWAndLogoActivity,
-		jobID, postID, cb).Get(ctx, &result)
+		jobID, postID, bucket, cb).Get(ctx, &result)
 	if err != nil {
 		logger.Error(CheckNSFWActivityErrorMsg, zap.Error(err))
 		if cadence.IsCustomError(err) {

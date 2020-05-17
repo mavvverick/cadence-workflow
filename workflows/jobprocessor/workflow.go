@@ -61,10 +61,12 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	}
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
-	if strings.Split(format.Payload, "|")[1] == strconv.Itoa(1) {
+	payloadSplit := strings.Split(format.Payload, "|")
+	if len(payloadSplit) > 1 && payloadSplit[1] == strconv.Itoa(1) {
+		bucketName := strings.Split(strings.Split(format.Source, "//")[1], ".")[0]
 		var predictResult dense.Response
 		err = workflow.ExecuteChildWorkflow(ctx, "AI",
-			runID, format.Payload, cb).Get(ctx, &predictResult)
+			runID, format.Payload, bucketName, cb).Get(ctx, &predictResult)
 		if err != nil {
 			logger.Error(ChildWorkflowExecErrMsg, zap.Error(err))
 			if cadence.IsCustomError(err) {

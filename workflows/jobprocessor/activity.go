@@ -225,14 +225,16 @@ func compressMedia(dO DownloadObject, format Format) error {
 		}
 	}
 
-	err = createThumbnail(dO)
-	if err != nil {
-		return err
-	} else {
-		for _, tc := range thumbnailCmd {
-			err = executeCommand(tc)
-			if err != nil {
-				return err
+	if !dO.Meta.isBoomerang {
+		err = createThumbnail(dO)
+		if err != nil {
+			return err
+		} else {
+			for _, tc := range thumbnailCmd {
+				err = executeCommand(tc)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

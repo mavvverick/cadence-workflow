@@ -11,7 +11,7 @@ require (
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
-	github.com/golang/protobuf v1.3.3
+	github.com/golang/protobuf v1.4.0
 	github.com/google/uuid v1.1.1
 	github.com/jinzhu/gorm v1.9.12
 	github.com/joho/godotenv v1.3.0
@@ -26,6 +26,7 @@ require (
 	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0
 	google.golang.org/api v0.18.0
 	google.golang.org/grpc v1.27.1
+	google.golang.org/protobuf v1.23.0
 	gopkg.in/validator.v2 v2.0.0-20191107172027-c3144fdedc21
 )
 

@@ -32,12 +32,12 @@ func init() {
 	)
 }
 
-func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.CallbackInfo) (*dense.Response, error) {
+func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string, cb *jp.CallbackInfo) (*dense.Response, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("checkNSFW started", zap.String("jobID", jobID))
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Start")
-	res, err := checkNSFWAndLogo(ctx, url)
+	res, err := checkNSFWAndLogo(ctx, postID, bucket)
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
 		cb.PushMessage(ctx, err.Error(), jp.Task, jobID, jp.CallbackErrorEvent)
@@ -57,10 +57,11 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, url string, cb *jp.Cal
 	return res, nil
 }
 
-func checkNSFWAndLogo(ctx context.Context, url string) (*dense.Response, error) {
+func checkNSFWAndLogo(ctx context.Context, postID, bucket string) (*dense.Response, error) {
 	mlClient := ctx.Value("mlClient").(dense.PredictClient)
 	imageData := &dense.ImageData{
-		PostId: url,
+		PostId: postID,
+		Bucket: bucket,
 	}
 	predictResponse, err := mlClient.PredictPipeline(ctx, imageData)
 	if err != nil {

@@ -25,6 +25,11 @@ var overlayThumbnail = "color=black:%v:d=%v[base];[0:v]setpts=PTS-STARTPTS[v0];"
 	"[tmp][v1]overlay,format=yuv420p[fv];" +
 	"[0:a]afade=out:st=%v:d=1"
 
+var overlayThumbnailWithoutAudio = "color=black:%v:d=%v[base];[0:v]setpts=PTS-STARTPTS[v0];" +
+	"[1:v]format=yuva420p,fade=in:st=0:d=0.4:alpha=1,setpts=PTS-STARTPTS+((%v)/TB)[v1];" +
+	"[base][v0]overlay[tmp];" +
+	"[tmp][v1]overlay,format=yuv420p[fv]"
+
 func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string {
 	destFields := strings.Split(encode.Destination, "/")
 	path := destFields[len(destFields)-2]
@@ -53,7 +58,7 @@ func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string 
 		dO.VideoPath + "_" +
 			encode.VideoCodec + "_" +
 			encode.Size
-	if dO.UserImage != "" {
+	if dO.UserImage != "" && !dO.Meta.isBoomerang {
 		outputPath += "_wm.mp4"
 	} else {
 		outputPath += ".mp4"
@@ -69,20 +74,24 @@ func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string 
 
 func createThumbnailCmd(dO DownloadObject, codec, size string) (string, error) {
 	duration := dO.Meta.Duration
-	inputFilePath := dO.VideoPath + "_" + codec + "_" + size + ".mp4"
+	outFilePath := dO.VideoPath + "_" + codec + "_" + size + ".mp4"
 	watermarkFilePath := dO.VideoPath + "_" + codec + "_" + size + "_" + "wm" + ".mp4"
+	filterComplex := ""
 
-	filter := fmt.Sprintf(overlayThumbnail, size, duration+3-0.4, duration-0.4, duration-1.0)
+	if dO.Meta.hasAudio {
+		filterComplex = fmt.Sprintf(overlayThumbnail, size, duration+3-0.4, duration-0.4, duration-1.0)
+	} else {
+		filterComplex = fmt.Sprintf(overlayThumbnailWithoutAudio, size, duration+3-0.4, duration-0.4)
+	}
 
 	thumbnailCmd :=
 		"ffmpeg" +
 			" -i " + watermarkFilePath +
 			" -i " + *localDirectory + dO.UserImage + ".mp4" +
-			" -filter_complex " + filter +
+			" -filter_complex " + filterComplex +
 			" -preset " + "superfast" +
 			" -map " + "[fv]" +
-			" -y " + inputFilePath
-
+			" -y " + outFilePath
 	return thumbnailCmd, nil
 }
 
@@ -112,10 +121,18 @@ func getMediaMeta(dO *DownloadObject) (*Meta, error) {
 		return nil, err
 	}
 
+	audio := true
+	numStreams := strings.Split(meta[2], "=")[1]
+	if numStreams != strconv.Itoa(2) {
+		audio = false
+	}
+
 	dO.Meta = &Meta{
-		Duration: durationParsed,
-		Size:     sizeParsed/(1024*1024),
-		Bitrate:  int(bitrateParsed/1000),
+		Duration:    durationParsed,
+		Size:        sizeParsed / (1024 * 1024),
+		Bitrate:     int(bitrateParsed / 1000),
+		hasAudio:    audio,
+		isBoomerang: strings.Contains(meta[1], "boomerang"),
 	}
 
 	return dO.Meta, nil
