@@ -24,7 +24,7 @@ const (
 	Upload                      = "UPLOAD"
 	Task                        = "task"
 	CallbackErrorEvent          = "error"
-	CallbackRejectEvent         = "reject"
+	CallbackRejectEvent         = "AI_REJECTED"
 	Completed                   = "COMPLETED"
 )
 

@@ -40,24 +40,26 @@ func New(configPath string) *Worker {
 func (w *Worker) Init(tasklist, verbose, workerType string) {
 	//start dependency injection
 	w.cadenceAdapter.Setup(&w.config.Cadence)
-
-	mlClientConn, err := grpc.PredictgRPCConnection()
-	if err != nil {
-		fmt.Println("Error ml client ", err)
-	}
-
-	var kafkaCallbackClient ka.KafkaAdapter
-	kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
-
-	ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
-	ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
-
 	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
 		EnableLoggingInReplay: true,
 	}
 
 	if workerType == "activity" {
+		mlClientConn, err := grpc.PredictgRPCConnection()
+		if err != nil {
+			fmt.Println("Error ml client ", err)
+		}
+
+		var kafkaCallbackClient ka.KafkaAdapter
+		kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
+		var kafkaDevCallbackClient ka.KafkaAdapter
+		kafkaDevCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_DEV_TOPIC"))
+
+		ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
+		ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
+		ctx = context.WithValue(ctx, "kafkaDevCallbackClient", kafkaDevCallbackClient)
+
 		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = true
 		workerOptions.DisableWorkflowWorker = true
