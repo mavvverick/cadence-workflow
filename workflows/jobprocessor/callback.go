@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"go.uber.org/cadence/activity"
-
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
+	"go.uber.org/cadence/activity"
 )
 
 //CallbackInfo ...
@@ -20,14 +19,16 @@ type CallbackInfo struct {
 	Event     string
 	Payload   string
 	PostID    string
+	Bucket    string
 }
 
 //NewCallbackInfo ...
-func NewCallbackInfo(format *Format) *CallbackInfo {
+func NewCallbackInfo(format *Format, bucket string) *CallbackInfo {
 	return &CallbackInfo{
 		URL:     format.CallbackURL,
 		PostID:  strings.Split(format.Payload, "|")[0],
 		Payload: format.Payload,
+		Bucket:  bucket,
 	}
 }
 
@@ -42,6 +43,7 @@ type webhookMessage struct {
 
 //PushMessage ...
 func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, token, event string) {
+
 	if activity.GetInfo(ctx).Attempt < 1 && (event == CallbackErrorEvent || event == CallbackRejectEvent) {
 		return
 	}
@@ -61,8 +63,13 @@ func (e *CallbackInfo) PushMessage(ctx context.Context, status, callbackType, to
 	if err != nil {
 		fmt.Println("err")
 	}
-	kafkaClient := ctx.Value("kafkaCallbackClient").(ka.KafkaAdapter)
 
+	kafkaClientName := "kafkaCallbackClient"
+	if e.Bucket != "yovo-app" {
+		kafkaClientName = "kafkaDevCallbackClient"
+	}
+
+	kafkaClient := ctx.Value(kafkaClientName).(ka.KafkaAdapter)
 	if body != nil {
 		err = kafkaClient.Producer.Publish(ctx, e.Payload, string(body))
 		if err != nil {

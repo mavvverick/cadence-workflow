@@ -42,35 +42,33 @@ func New(configPath string) *Worker {
 func (w *Worker) Init(tasklist, verbose, workerType string) {
 	//start dependency injection
 	w.cadenceAdapter.Setup(&w.config.Cadence)
-
-	gcsClient, err := storage.NewClient(context.Background(),
-		option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
-	if err != nil {
-		fmt.Println("Cannot initiate GCS Client")
-		return
-	}
-
-	var kafkaCallbackClient ka.KafkaAdapter
-	kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
-
-	var kafkaCronClient ka.KafkaAdapter
-	kafkaCronClient.Setup(&w.config.Kafka, os.Getenv("CRON_TOPIC"))
-
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "cadenceClient", w.cadenceAdapter)
-	ctx = context.WithValue(ctx, "gcsClient", gcsClient)
-	ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
-	ctx = context.WithValue(ctx, "kafkaCronClient", kafkaCronClient)
-
 	workerOptions := worker.Options{
 		MetricsScope:          w.cadenceAdapter.Scope,
 		EnableLoggingInReplay: true,
 	}
 
 	if workerType == "activity" {
+		gcsClient, err := storage.NewClient(context.Background(),
+			option.WithCredentialsJSON([]byte(os.Getenv("GOOGLE_JSON"))))
+		if err != nil {
+			fmt.Println("Cannot initiate GCS Client")
+			return
+		}
+		var kafkaCallbackClient ka.KafkaAdapter
+		kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
+		var kafkaDevCallbackClient ka.KafkaAdapter
+		kafkaDevCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_DEV_TOPIC"))
+		var kafkaCronClient ka.KafkaAdapter
+		kafkaCronClient.Setup(&w.config.Kafka, os.Getenv("CRON_TOPIC"))
+
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, "cadenceClient", w.cadenceAdapter)
+		ctx = context.WithValue(ctx, "gcsClient", gcsClient)
+		ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
+		ctx = context.WithValue(ctx, "kafkaCronClient", kafkaCronClient)
+		ctx = context.WithValue(ctx, "kafkaDevCallbackClient", kafkaDevCallbackClient)
 
 		workerOptions.BackgroundActivityContext = ctx
-
 		workerOptions.EnableSessionWorker = true
 		workerOptions.DisableWorkflowWorker = true
 		workerOptions.DisableActivityWorker = false

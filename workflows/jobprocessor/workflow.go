@@ -35,8 +35,9 @@ func init() {
 
 // Workflow Session Based to perform transcoding with AI child workflow to detect nsfw
 func Workflow(ctx workflow.Context, jobID string, format Format) error {
+	bucketName := strings.Split(strings.Split(format.Source, "//")[1], ".")[0]
 	logger := workflow.GetLogger(ctx)
-	cb := NewCallbackInfo(&format)
+	cb := NewCallbackInfo(&format, bucketName)
 	exec := workflow.GetInfo(ctx).WorkflowExecution
 
 	jobID = exec.ID
@@ -63,7 +64,6 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 
 	payloadSplit := strings.Split(format.Payload, "|")
 	if len(payloadSplit) > 1 && payloadSplit[1] == strconv.Itoa(1) {
-		bucketName := strings.Split(strings.Split(format.Source, "//")[1], ".")[0]
 		var predictResult dense.Response
 		err = workflow.ExecuteChildWorkflow(ctx, "AI",
 			runID, format.Payload, bucketName, cb).Get(ctx, &predictResult)
