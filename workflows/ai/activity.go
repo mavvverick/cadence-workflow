@@ -49,8 +49,8 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string,
 			cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
 			return nil, cadence.NewCustomError(res.Error)
 		}
-		cb.PushMessage(ctx, NSFWErrorMessage, jp.Task, jobID, jp.CallbackRejectEvent)
-		return nil, errors.New(NSFWErrorMessage)
+		cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackRejectEvent)
+		return nil, errors.New(res.Message)
 	}
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Finished")
