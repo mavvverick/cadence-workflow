@@ -11,6 +11,7 @@ import (
 
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
+	"github.com/YOVO-LABS/workflow/common/monitoring"
 	"github.com/YOVO-LABS/workflow/config"
 	"github.com/YOVO-LABS/workflow/internal/grpc"
 	"go.uber.org/cadence/worker"
@@ -59,6 +60,12 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		ctx := context.WithValue(context.Background(), "mlClient", mlClientConn)
 		ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
 		ctx = context.WithValue(ctx, "kafkaDevCallbackClient", kafkaDevCallbackClient)
+
+		udpConn, err := monitoring.UDPConnection()
+		if err != nil {
+			fmt.Println("Error udp client ", err)
+		}
+		ctx = context.WithValue(context.Background(), "udpConn", udpConn)
 
 		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = true

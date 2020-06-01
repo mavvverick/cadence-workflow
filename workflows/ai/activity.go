@@ -2,12 +2,13 @@ package ai
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"go.uber.org/cadence"
 
+	"github.com/YOVO-LABS/workflow/common/monitoring"
 	"github.com/YOVO-LABS/workflow/proto/dense"
 	jp "github.com/YOVO-LABS/workflow/workflows/jobprocessor"
 
@@ -43,14 +44,24 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string,
 		cb.PushMessage(ctx, err.Error(), jp.Task, jobID, jp.CallbackErrorEvent)
 		return nil, cadence.NewCustomError(err.Error())
 	}
+
 	if res.IsNext == false {
-		fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
-		if res.Error != "" {
-			cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
-			return nil, cadence.NewCustomError(res.Error)
+		ev := monitoring.AIEvent{
+			PostID:  postID,
+			Meta:    res.Error,
+			IsTrue:  res.IsNext,
+			Version: "1",
 		}
-		cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackRejectEvent)
-		return nil, errors.New(res.Message)
+		data := ev.Message()
+		udpConn := ctx.Value("udpConn").(*net.UDPConn)
+		monitoring.FireEvent(udpConn, data)
+		// fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
+		// if res.Error != "" {
+		// 	cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
+		// 	return nil, cadence.NewCustomError(res.Error)
+		// }
+		// cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackRejectEvent)
+		// return nil, errors.New(res.Message)
 	}
 
 	fmt.Println(jobID, time.Now(), "checkNSFW Activity -> Finished")
