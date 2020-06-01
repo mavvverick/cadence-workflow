@@ -53,7 +53,10 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string,
 			Version: "1",
 		}
 		data := ev.Message()
-		udpConn := ctx.Value("udpConn").(*net.UDPConn)
+		udpConn, ok := ctx.Value("udpConn").(*net.UDPConn)
+		if !ok {
+			return nil, cadence.NewCustomError("No udp connection")
+		}
 		monitoring.FireEvent(udpConn, data)
 		// fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
 		// if res.Error != "" {

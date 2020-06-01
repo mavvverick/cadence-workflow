@@ -51,7 +51,6 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		if err != nil {
 			fmt.Println("Error ml client ", err)
 		}
-
 		var kafkaCallbackClient ka.KafkaAdapter
 		kafkaCallbackClient.Setup(&w.config.Kafka, os.Getenv("CB_TOPIC"))
 		var kafkaDevCallbackClient ka.KafkaAdapter
@@ -65,7 +64,7 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		if err != nil {
 			fmt.Println("Error udp client ", err)
 		}
-		ctx = context.WithValue(context.Background(), "udpConn", udpConn)
+		ctx = context.WithValue(ctx, "udpConn", udpConn)
 
 		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = true
