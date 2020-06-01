@@ -315,6 +315,14 @@ func uploadFile(ctx context.Context, fpath string, format Format) error {
 		}
 	}
 
+	// deleting the input media from gcs raw directory
+	bucket := strings.Split(strings.Split(format.Source, "//")[1], ".")[0]
+	objectPath := strings.Split(format.Source, ".com/")[1]
+	src := storageClient.Bucket(bucket).Object(objectPath)
+	if err := src.Delete(ctx); err != nil {
+		return err
+	}
+
 	if err := os.RemoveAll(*localDirectory); err != nil {
 		return err
 	}
