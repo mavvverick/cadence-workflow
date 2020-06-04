@@ -3,14 +3,18 @@ package jobprocessor
 import (
 	"context"
 	"fmt"
+	"math"
+	"net"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/YOVO-LABS/workflow/common/monitoring"
 	"github.com/uber/cadence/common"
 	"google.golang.org/api/option"
 
 	"cloud.google.com/go/storage"
+	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/zap"
 )
@@ -69,7 +73,7 @@ func downloadFileActivity(ctx context.Context, jobID, url, payload, watermark st
 	return dO, nil
 }
 
-func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject, format Format, cb *CallbackInfo) error {
+func compressMediaActivity(ctx context.Context, jobID string, dO *DownloadObject, format Format, cb *CallbackInfo) (*DownloadObject, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("compressFileActivity started.", zap.String("jobID", jobID))
 
@@ -79,15 +83,15 @@ func compressMediaActivity(ctx context.Context, jobID string, dO DownloadObject,
 	if err != nil {
 		fmt.Println(jobID, time.Now(), CompressionActivityErrorMsg)
 		cb.PushMessage(ctx, Compression, Task, jobID, CallbackErrorEvent)
-		return err
+		return nil, err
 	}
 
 	fmt.Println(jobID, time.Now(), "compressFile Activity -> Finished")
 
-	return nil
+	return dO, nil
 }
 
-func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format, cb *CallbackInfo) error {
+func uploadFileActivity(ctx context.Context, jobID, fpath string, duration float64, format Format, cb *CallbackInfo) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("uploadFileActivity begin", zap.String("jobID", jobID))
 
@@ -102,6 +106,18 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, format Format,
 
 	fmt.Println(jobID, time.Now(), "uploadFile Activity -> Finished")
 	cb.PushMessage(ctx, Completed, Task, jobID, "saved")
+
+	eventMessages := jobCompletionEventMessage(jobID, format.Payload, duration, format)
+	for _, ev := range eventMessages {
+		data := ev.Message()
+		fmt.Printf(data)
+		udpConn, ok := ctx.Value("udpConn").(*net.UDPConn)
+		if !ok {
+			return cadence.NewCustomError("No udp connection")
+		}
+
+		monitoring.FireEvent(udpConn, data)
+	}
 	return nil
 }
 
@@ -198,8 +214,8 @@ func downloadResources(ctx context.Context, url, payload, watermarkURL string) (
 	return &dO, nil
 }
 
-func compressMedia(dO DownloadObject, format Format) error {
-	_, err := getMediaMeta(&dO)
+func compressMedia(dO *DownloadObject, format Format) error {
+	_, err := getMediaMeta(dO)
 	if err != nil {
 		return err
 	}
@@ -241,7 +257,7 @@ func compressMedia(dO DownloadObject, format Format) error {
 	return nil
 }
 
-func createEncodeCommand(dO DownloadObject, encodes []Encode) (encodeCmd264, encodeCmd265 string, watermarkCmd, thumbnailCmd []string) {
+func createEncodeCommand(dO *DownloadObject, encodes []Encode) (encodeCmd264, encodeCmd265 string, watermarkCmd, thumbnailCmd []string) {
 	encodeCmd264 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
 	encodeCmd265 = "ffmpeg" + " -i " + dO.VideoPath + ".mp4"
 
@@ -268,7 +284,7 @@ func createEncodeCommand(dO DownloadObject, encodes []Encode) (encodeCmd264, enc
 	return
 }
 
-func createThumbnail(dO DownloadObject) error {
+func createThumbnail(dO *DownloadObject) error {
 	imgPath := *localDirectory + dO.UserImage
 
 	if dO.Background != "" {
@@ -327,6 +343,25 @@ func uploadFile(ctx context.Context, fpath string, format Format) error {
 		return err
 	}
 	return nil
+}
+
+func jobCompletionEventMessage(jobID, payload string, duration float64, format Format) []*monitoring.VideoCostEvent {
+	var e []*monitoring.VideoCostEvent
+	timeCostMultiplier := math.Ceil(duration / 60)
+	postID := strings.Split(payload, "|")[0]
+	for _, encode := range format.Encode {
+		msg := monitoring.VideoCostEvent{}
+		msg.Event = "saved"
+		msg.Status = Completed
+		msg.PostID = postID
+		msg.TaskToken = jobID
+		msg.VideoType = encode.VideoFormat
+		msg.VideoDuration = duration
+		msg.VideoQuality = strings.Split(encode.Size, "x")[0] + "p"
+		msg.TimeCostMultiplier = int32(timeCostMultiplier)
+		e = append(e, &msg)
+	}
+	return e
 }
 
 func migrateToColdline(ctx context.Context, jobID string, format Format) error {

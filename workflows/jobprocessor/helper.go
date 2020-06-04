@@ -30,7 +30,7 @@ var overlayThumbnailWithoutAudio = "color=black:%v:d=%v[base];[0:v]setpts=PTS-ST
 	"[base][v0]overlay[tmp];" +
 	"[tmp][v1]overlay,format=yuv420p[fv]"
 
-func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string {
+func createWatermarkCmd(encode Encode, dO *DownloadObject, preset string) string {
 	destFields := strings.Split(encode.Destination, "/")
 	path := destFields[len(destFields)-2]
 
@@ -72,7 +72,7 @@ func createWatermarkCmd(encode Encode, dO DownloadObject, preset string) string 
 	return watermarkCmd
 }
 
-func createThumbnailCmd(dO DownloadObject, codec, size string) (string, error) {
+func createThumbnailCmd(dO *DownloadObject, codec, size string) (string, error) {
 	duration := dO.Meta.Duration
 	outFilePath := dO.VideoPath + "_" + codec + "_" + size + ".mp4"
 	watermarkFilePath := dO.VideoPath + "_" + codec + "_" + size + "_" + "wm" + ".mp4"

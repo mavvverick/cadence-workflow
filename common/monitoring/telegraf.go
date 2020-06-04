@@ -19,6 +19,18 @@ type AIEvent struct {
 	Version string
 }
 
+//VideoCostEvent is a struct for log events of videos processed
+type VideoCostEvent struct {
+	Status             string
+	TaskToken          string
+	Event              string
+	PostID             string
+	VideoType          string
+	VideoDuration      float64
+	VideoQuality       string
+	TimeCostMultiplier int32
+}
+
 //UDPConnection makes a connection to the telegraf server
 func UDPConnection() (*net.UDPConn, error) {
 	TelegrafAddress, err := net.ResolveUDPAddr("udp", os.Getenv("TELEGRAPH_ADDRESS"))
@@ -46,4 +58,9 @@ func FireEvent(conn *net.UDPConn, message string) {
 //Message construct message
 func (aie *AIEvent) Message() string {
 	return fmt.Sprintf("ai_events,plat=android,is_true=%v,version=%s meta=\"%s\",post_id=\"%s\"", aie.IsTrue, aie.Version, aie.Meta, aie.PostID)
+}
+
+//Message construct message
+func (vce *VideoCostEvent) Message() string {
+	return fmt.Sprintf("cost_video_events,status=%s,event=%s,video_quality=%s,video_type=%s post_id=\"%s\",task_token=\"%s\",time_mult=%d,video_duration=%.2f", vce.Status, vce.Event, vce.VideoQuality, vce.VideoType, vce.PostID, vce.TaskToken, vce.TimeCostMultiplier, vce.VideoDuration)
 }

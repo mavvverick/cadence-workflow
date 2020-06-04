@@ -104,14 +104,14 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	}
 
 	err = workflow.ExecuteActivity(ctx, compressMediaActivity,
-		jobID, dO, format, cb).Get(ctx, nil)
+		jobID, &dO, format, cb).Get(ctx, &dO)
 	if err != nil {
 		logger.Error(CompressionActivityErrorMsg, zap.Error(err))
 		return cadence.NewCustomError(err.Error(), CompressionActivityErrorMsg)
 	}
 
 	err = workflow.ExecuteActivity(ctx, uploadFileActivity,
-		jobID, dO.VideoPath, format, cb).Get(ctx, nil)
+		jobID, dO.VideoPath, dO.Meta.Duration, format, cb).Get(ctx, nil)
 	if err != nil {
 		logger.Error(UploadActivityErrorMsg, zap.Error(err))
 		return cadence.NewCustomError(err.Error(), UploadActivityErrorMsg)
