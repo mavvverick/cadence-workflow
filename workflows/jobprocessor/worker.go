@@ -12,6 +12,7 @@ import (
 	"cloud.google.com/go/storage"
 	ca "github.com/YOVO-LABS/workflow/common/cadence"
 	ka "github.com/YOVO-LABS/workflow/common/messaging"
+	"github.com/YOVO-LABS/workflow/common/monitoring"
 	"github.com/YOVO-LABS/workflow/config"
 	"google.golang.org/api/option"
 
@@ -67,6 +68,12 @@ func (w *Worker) Init(tasklist, verbose, workerType string) {
 		ctx = context.WithValue(ctx, "kafkaCallbackClient", kafkaCallbackClient)
 		ctx = context.WithValue(ctx, "kafkaCronClient", kafkaCronClient)
 		ctx = context.WithValue(ctx, "kafkaDevCallbackClient", kafkaDevCallbackClient)
+
+		udpConn, err := monitoring.UDPConnection()
+		if err != nil {
+			fmt.Println("Error udp client ", err)
+		}
+		ctx = context.WithValue(ctx, "udpConn", udpConn)
 
 		workerOptions.BackgroundActivityContext = ctx
 		workerOptions.EnableSessionWorker = true

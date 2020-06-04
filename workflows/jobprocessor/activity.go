@@ -110,7 +110,6 @@ func uploadFileActivity(ctx context.Context, jobID, fpath string, duration float
 	eventMessages := jobCompletionEventMessage(jobID, format.Payload, duration, format)
 	for _, ev := range eventMessages {
 		data := ev.Message()
-		fmt.Printf(data)
 		udpConn, ok := ctx.Value("udpConn").(*net.UDPConn)
 		if !ok {
 			return cadence.NewCustomError("No udp connection")
