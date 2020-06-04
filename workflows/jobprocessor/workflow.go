@@ -1,6 +1,7 @@
 package jobprocessor
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -62,7 +63,7 @@ func Workflow(ctx workflow.Context, jobID string, format Format) error {
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
 	payloadSplit := strings.Split(format.Payload, "|")
-	if len(payloadSplit) == 4 && payloadSplit[3] == "true" {
+	if len(payloadSplit) == 4 && payloadSplit[3] == "true" && os.Getenv("Is_AI_ALLOW") == "true" {
 		var predictResult dense.Response
 		err = workflow.ExecuteChildWorkflow(ctx, "AI",
 			runID, format.Payload, bucketName, cb).Get(ctx, &predictResult)

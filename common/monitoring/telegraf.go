@@ -26,7 +26,6 @@ func UDPConnection() (*net.UDPConn, error) {
 		fmt.Println("Error in UDP telegraf address resolution: ", err)
 		return nil, err
 	}
-
 	conn, err := net.DialUDP("udp", nil, TelegrafAddress)
 	if err != nil {
 		fmt.Println("Error in UDP telegraf connection: ", err)

@@ -46,9 +46,13 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string,
 	}
 
 	if res.IsNext == false {
+		if res.Error != "" {
+			cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
+			return nil, cadence.NewCustomError(res.Error)
+		}
 		ev := monitoring.AIEvent{
 			PostID:  postID,
-			Meta:    res.Error,
+			Meta:    res.Message,
 			IsTrue:  res.IsNext,
 			Version: "1",
 		}
@@ -58,11 +62,6 @@ func checkNSFWAndLogoActivity(ctx context.Context, jobID, postID, bucket string,
 			return nil, cadence.NewCustomError("No udp connection")
 		}
 		monitoring.FireEvent(udpConn, data)
-		// fmt.Println(jobID, time.Now(), CheckNSFWActivityErrorMsg)
-		// if res.Error != "" {
-		// 	cb.PushMessage(ctx, res.Error, jp.Task, jobID, jp.CallbackErrorEvent)
-		// 	return nil, cadence.NewCustomError(res.Error)
-		// }
 		// cb.PushMessage(ctx, res.Message, jp.Task, jobID, jp.CallbackRejectEvent)
 		// return nil, errors.New(res.Message)
 	}
